@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    /* 1. CONFIGURACIÓN BASE Y SCROLL */
+    html, body { width: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; }
+    .app-container { max-width: 800px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-top: 20px; }
+
+    /* 2. COMPONENTES GLOBALES */
+    .content-area { padding: 20px; flex: 1; padding-bottom: 50px; }
+    .back-btn { background: #5f6368; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-bottom: 15px; font-weight: 500; font-size: 13px; }
+    .search-container { text-align: center; margin-bottom: 20px; margin-top: 10px; }
+    .search-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    input { flex: 1; padding: 12px 15px; border: 1px solid #dfe1e5; border-radius: 50px; font-size: 16px; outline: none; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    input:focus { border-color: #004b8d; box-shadow: 0 1px 6px rgba(0,75,141,0.3); }
+    
+    /* 3. BOTONES */
+    .btn-main { background: #004b8d; color: white; border: none; padding: 0 20px; border-radius: 50px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .action-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .btn-action { background: white; border: 1px solid #dfe1e5; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; color: #555; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 13px; }
+    .btn-link { text-decoration: none; background: #28a745; color: white; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; text-align: center; display: block; box-shadow: 0 2px 4px rgba(40,167,69,0.3); }
+    @media (min-width: 600px) { .btn-link { display: inline-block; padding: 8px 20px; } }
+
+    /* 4. DASHBOARD */
+    .dashboard-grid { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .module-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid #eee; }
+    .module-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); border-color: #004b8d; }
+    .static-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; cursor: default; }
+    .module-img-box { height: 120px; width: 100%; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #f0f0f0; }
+    .module-img { max-height: 80%; max-width: 80%; object-fit: contain; }
+    .module-content { padding: 15px; text-align: center; }
+    .module-title { font-size: 18px; font-weight: 700; color: #004b8d; margin-bottom: 5px; }
+    .module-desc { font-size: 13px; color: #666; line-height: 1.4; }
+
+    /* 5. INSURANCE STYLES */
+    .result-item { background: white; margin-bottom: 12px; border-radius: 12px; padding: 12px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; border-left: 5px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .result-item:hover { transform: translateX(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 5px solid #004b8d; }
+    .logo-box { width: 90px; height: 50px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #f0f0f0; border-radius: 6px; margin-right: 15px; overflow: hidden; flex-shrink: 0; }
+    .logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .info-box { flex: 1; overflow: hidden; }
+    .payer-name { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 3px; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 10px 0; }
+    .grid-card { background: white; border-radius: 10px; overflow: hidden; border: 1px solid #eee; cursor: pointer; transition: 0.2s; text-align: center; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .grid-card:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: #004b8d; }
+    .grid-logo-img { width: 100%; height: 50px; object-fit: contain; margin-bottom: 8px; }
+    .grid-card-img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; margin-bottom: 5px; }
+    .grid-label { font-size: 12px; font-weight: 600; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .detail-header { background: #004b8d; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: white; text-align: center; }
+    @media (min-width: 600px) { .detail-header { flex-direction: row; text-align: left; } }
+    .detail-logo { width: 140px; height: 70px; background: white; border-radius: 8px; padding: 5px; object-fit: contain; }
+    .detail-body { padding: 15px; }
+    .row-entry { border-bottom: 1px solid #f0f0f0; padding-bottom: 25px; margin-bottom: 25px; }
+    .portal-section { display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+    @media (min-width: 600px) { .portal-section { flex-direction: row; align-items: center; justify-content: space-between; } }
+    .credentials { background: #fff8e1; border-left: 4px solid #ffc107; padding: 12px; margin-top: 15px; font-family: 'Courier New', monospace; color: #5d4037; border-radius: 4px; font-size: 13px; word-break: break-all; }
+    .card-gallery { margin-top: 20px; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
+    .card-thumb { height: 90px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+    .note-line:before { content: "•"; position: absolute; left: 0; color: #004b8d; font-weight: bold; }
+    .note-line { display: block; margin-bottom: 8px; padding-left: 15px; position: relative; }
+    .smart-link { color: #004b8d; text-decoration: none; font-weight: 600; border-bottom: 1px solid #004b8d; word-break: break-word; }
+
+    /* 6. DOCUMENTS STYLES */
+    .doc-list { display: flex; flex-direction: column; gap: 10px; max-width: 600px; margin: 0 auto; }
+    .doc-card { background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid #eee; text-decoration: none; color: #333; transition: transform 0.2s, box-shadow 0.2s; }
+    .doc-card:hover { transform: translateX(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-color: #004b8d; }
+    .doc-icon { width: 40px; height: 40px; object-fit: contain; }
+    .doc-info { flex: 1; }
+    .doc-title { font-weight: 600; font-size: 15px; color: #004b8d; }
+
+    /* 7. OFFICES STYLES */
+    .office-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .office-img-container { width: 100%; height: 180px; position: relative; }
+    .office-img { width: 100%; height: 100%; object-fit: cover; }
+    .office-content { padding: 20px; }
+    .office-title { font-size: 18px; font-weight: 700; color: #004b8d; margin-bottom: 5px; }
+    .office-address { font-size: 14px; color: #555; margin-bottom: 15px; display: flex; align-items: center; gap: 5px; }
+    .feature-badges { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .badge-feat { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #f0f0f0; color: #444; display: flex; align-items: center; gap: 5px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-map { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #333; text-align: center; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .btn-provider-link { display: block; width: auto; background: #e3f2fd; color: #004b8d; text-align: center; padding: 10px; border-radius: 8px; margin-top: 15px; font-weight: bold; border: 1px solid #bbdefb; cursor: pointer; box-sizing: border-box; }
+    .btn-provider-link:hover { background: #bbdefb; }
+
+    /* 8. ESTILOS MÓDULO MEDICAMENTOS */
+    .med-result-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eee; max-width: 600px; margin: 20px auto; }
+    .med-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; }
+    .med-name { font-size: 22px; font-weight: 800; color: #333; }
+    .badge-exact { background: #e6fffa; color: #00796b; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid #b2dfdb; }
+    .badge-ai { background: #f3e5f5; color: #7b1fa2; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid #e1bee7; display: flex; align-items: center; gap: 5px; }
+    
+    .criteria-box { background: #fff8e1; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px; color: #5d4037; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+    .ai-disclaimer { font-size: 11px; color: #888; text-align: center; margin-top: 15px; font-style: italic; }
+    .loading-pulse { text-align: center; color: #004b8d; font-weight: bold; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    /* 9. ESTILOS SEARCH BAR */
+    .smart-search-container { display: flex; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    #smartSearchInput { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+    #smartSearchBtn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 0 20px; cursor: pointer; font-weight: bold; }
+    .smart-search-output { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #667eea; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-size: 15px; line-height: 1.6; }
+
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <div id="dashboardView">
+    <h2 style="text-align:center; color:#555; font-weight:400; margin-top:30px;">Select a Module</h2>
+    <div id="moduleGrid" class="dashboard-grid"><p style="text-align:center; width:100%;">Loading modules...</p></div>
+  </div>
+
+  <div id="insuranceModule" style="display:none;" class="content-area">
+    <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+    <div id="searchView">
+      <div class="search-container">
+        <h3 style="color:#555; margin-bottom:15px; font-weight:400;">Internal Portal Payer Search</h3>
+        <div class="search-box">
+          <input type="text" id="queryInput" placeholder="Enter Payer Name..." onkeyup="if(event.key === 'Enter') doSearch()">
+          <button class="btn-main" onclick="doSearch()">SEARCH</button>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action" onclick="loadAllPayers()">📂 Browse All</button>
+          <button class="btn-action" onclick="loadAllCards()">💳 Insurance Cards</button>
+        </div>
+      </div>
+      <div id="resultsList"></div>
+    </div>
+    <div id="galleryView" style="display:none;">
+      <button class="back-btn" onclick="showSearch()">← Back to Search</button>
+      <h2 id="galleryTitle" class="view-title"></h2>
+      <div id="galleryGrid" class="grid-container"></div>
+    </div>
+    <div id="detailView" style="display:none;">
+      <button class="back-btn" onclick="showSearch()">← Back to Search</button>
+      <div id="detailContent"></div>
+    </div>
+  </div> 
+  
+  <div id="providersModule" style="display:none;" class="content-area">
+    <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+    <div class="search-container">
+      <h3>Provider Directory</h3>
+      <div class="search-box">
+        <input type="text" id="providerSearchInput" placeholder="Search Provider Name..." onkeyup="filterProviders()">
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px; flex-wrap:wrap;">
+        <select id="serviceFilter" onchange="filterProviders()" style="padding:10px; border-radius:8px; border:1px solid #ddd;"><option value="">All Services</option></select>
+        <select id="locationFilter" onchange="filterProviders()" style="padding:10px; border-radius:8px; border:1px solid #ddd;"><option value="">All Locations</option></select>
+        <select id="langFilter" onchange="filterProviders()" style="padding:10px; border-radius:8px; border:1px solid #ddd;"><option value="">All Languages</option></select>
+        <select id="sexFilter" onchange="filterProviders()" style="padding:10px; border-radius:8px; border:1px solid #ddd;"><option value="">All Genders</option><option value="F">Female (F)</option><option value="M">Male (M)</option></select>
+      </div>
+    </div>
+    <div id="providersList" class="dashboard-grid"><p style="text-align:center;">Loading directory...</p></div>
+  </div> 
+  
+  <div id="docsModule" style="display:none;" class="content-area">
+    <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+    <div class="search-container">
+      <h3>Common Documents</h3>
+      <div class="search-box">
+        <input type="text" id="docSearchInput" placeholder="Filter documents..." onkeyup="filterDocs()">
+      </div>
+    </div>
+    <div id="docsListContainer" class="doc-list"><p style="text-align:center;">Loading documents...</p></div>
+  </div>
+
+  <div id="officesModule" style="display:none;" class="content-area">
+    <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+    <div class="search-container"><h3>Office Locations</h3></div>
+    <div class="filters-container" style="background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #ddd; display: flex; gap: 15px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+  
+      <div style="flex: 1; min-width: 200px;">
+        <label style="display:block; font-size: 11px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 8px;">📍 Select Office</label>
+        <select id="filterOfficeName" onchange="applyOfficeFilters()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background: #f0f0f0; cursor: wait;" disabled>
+          <option value="none">Loading locations...</option>
+        </select>
+      </div>
+
+      <div style="flex: 1; min-width: 200px;">
+        <label style="display:block; font-size: 11px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 8px;">🩺 Select Service</label>
+        <select id="filterOfficeService" onchange="applyOfficeFilters()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background: #f0f0f0; cursor: wait;" disabled>
+          <option value="">Loading services...</option>
+        </select>
+      </div>
+
+      <div style="flex: 0.5; min-width: 150px; display: flex; align-items: center; padding-top: 20px;">
+        <label style="cursor: pointer; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #444;">
+          <input type="checkbox" id="filterOfficeAccess" onchange="applyOfficeFilters()" style="margin-right: 10px; width: 18px; height: 18px;"> 
+          ♿ Accessible Only
+        </label>
+      </div>
+
+    </div>
+    <div id="officesListContainer"><p style="text-align:center;">Loading locations...</p></div>
+  </div>
+
+  <div id="medsModule" style="display:none;" class="content-area">
+    <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+    
+    <div class="search-container">
+      <h3>Medication Guidelines</h3>
+      <div class="search-box">
+        <input type="text" id="medInput" placeholder="Enter medication (e.g., Xanax, Lipitor)..." onkeyup="if(event.key === 'Enter') searchMedication()">
+        <button class="btn-main" onclick="searchMedication()">CHECK</button>
+      </div>
+    </div>
+
+    <div id="medResultContainer"></div>
+   </div>
+
+  <div id="view_module_ai" style="display:none; height: 85vh; flex-direction: column; background: #f0f2f5; border-radius: 8px; overflow: hidden; border: 1px solid #ddd;">
+    
+    <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;">
+        <button class="back-btn" onclick="goHome()">🏠 Home Menu</button>
+        
+        <h2 style="text-align: center; margin: 0 0 8px 0; color: #1a73e8; font-size: 26px;">
+            ✨ AI Smart Search
+        </h2>
+        
+        <p style="text-align: center; margin: 0; color: #5f6368; font-size: 14px;">
+            Ask the AI Assistant about clinical protocols, office details, and medical guidelines.
+        </p>
+    </div>
+
+    <div id="smartSearchOutput" style="flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;">
+      <div style="text-align:center; color:#888; margin-top: 20px; font-size: 13px; background: #e9ecef; padding: 8px 15px; border-radius: 12px; align-self: center;">
+        Start a conversation. Ask me about protocols, offices, or procedures!
+      </div>
+    </div>
+
+    <div style="background: #ffffff; padding: 12px 15px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #ccc; flex-shrink: 0;">
+      <button onclick="clearAiChat()" style="background: #fff0f0; border: 1px solid #ffcdd2; color: #d32f2f; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; flex-shrink: 0; padding: 0;" title="Clear Chat">🗑️</button>
+      
+      <input type="text" id="smartSearchInput" placeholder="Type your question here..." onkeypress="handleSmartSearch(event)" style="flex: 1; padding: 12px 18px; border-radius: 24px; border: 1px solid #ccc; outline: none; font-size: 14px; background: #f8f9fa;">
+      
+      <button id="smartSearchBtn" onclick="executeSmartSearch()" style="background: #1a73e8; color: white; border: none; border-radius: 50%; width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; padding: 0; margin: 0;" title="Send">➤</button>
+    </div>
+    
+  </div>
+
+</div>
+
+<script>
+  // --- INICIALIZACIÓN ---
+  window.onload = function() { loadModules(); };
+
+  function loadModules() {
+    google.script.run.withSuccessHandler(renderDashboard).getAppModules();
+  }
+
+  function renderDashboard(modules) {
+    const grid = document.getElementById('moduleGrid');
+    grid.innerHTML = '';
+    modules.forEach(mod => {
+      const card = document.createElement('div');
+      card.className = 'module-card' + (mod.locked ? ' locked' : '');
+      if (!mod.locked) { card.onclick = () => openModule(mod.id); }
+      card.innerHTML = `
+        <div class="module-img-box"><img src="${mod.image}" class="module-img"></div>
+        <div class="module-content">
+          <div class="module-title">${mod.name}</div>
+          <div class="module-desc">${mod.description}</div>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // --- NAVEGACIÓN Y SCROLL ---
+  function goHome() {
+    ['insuranceModule','providersModule','docsModule','officesModule','medsModule','view_module_ai'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('dashboardView').style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function openModule(moduleId) {
+    // 1. Ocultar todo
+    ['dashboardView','insuranceModule','providersModule','docsModule','officesModule', 'medsModule','view_module_ai'].forEach(id => {
+       const el = document.getElementById(id);
+       if (el) el.style.display = 'none';
+    });
+
+    // 2. Reset Scroll (Para asegurar posición inicial)
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0; 
+    document.documentElement.scrollTop = 0;
+
+    // 3. Mostrar módulo
+    if (moduleId === 'module_insurance') {
+      document.getElementById('insuranceModule').style.display = 'block';
+    } else if (moduleId === 'module_providers') {
+      document.getElementById('providersModule').style.display = 'block';
+      if (allProvidersData && allProvidersData.length > 0) {
+         renderProviders(allProvidersData);
+      } else {
+         loadProviders();
+      }
+    } else if (moduleId === 'module_docs') {
+      document.getElementById('docsModule').style.display = 'block';
+      loadDocs();
+    } else if (moduleId === 'module_offices') {
+      document.getElementById('officesModule').style.display = 'block';
+      loadOffices();
+    } else if (moduleId === 'module_meds') { 
+       document.getElementById('medsModule').style.display = 'block';
+       document.getElementById('medResultContainer').innerHTML = ''; 
+       document.getElementById('medInput').value = '';
+       document.getElementById('medInput').focus();
+    }else if (moduleId === 'module_ai') {
+      document.getElementById('view_module_ai').style.display = 'flex';
+    }
+  }
+
+  // --- MÓDULO: INSURANCE ---
+
+  function doSearch() {
+    const q = document.getElementById('queryInput').value.trim();
+    if (!q) return;
+    document.getElementById('resultsList').innerHTML = '<p style="text-align:center; color:#999;">Searching...</p>';
+    google.script.run.withSuccessHandler(renderSearchResults).findInsuranceOptions(q);
+  }
+
+  function renderSearchResults(options) {
+    const list = document.getElementById('resultsList');
+    list.innerHTML = '';
+    if (options.length === 0) { list.innerHTML = '<p style="text-align:center; color:#d93025;">No results found.</p>'; return; }
+    options.forEach(opt => {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.onclick = () => loadPayer(opt.name);
+      let noteHtml = opt.matchType === 'note' ? `<div class="note-match">⚠️ Found in notes: "${opt.noteSnippet}"</div>` : '';
+      div.innerHTML = `<div class="logo-box"><img src="${opt.logo}" class="logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'"></div>
+                       <div class="info-box"><div class="payer-name">${opt.name}</div>${noteHtml}</div>`;
+      list.appendChild(div);
+    });
+  }
+
+  function loadAllPayers() {
+    switchLocalView('galleryView');
+    document.getElementById('galleryTitle').innerText = "All Insurance Options";
+    document.getElementById('galleryGrid').innerHTML = '<p style="text-align:center;">Loading logos...</p>';
+    google.script.run.withSuccessHandler(renderPayerGrid).getAllPayersData();
+  }
+
+  function renderPayerGrid(payers) {
+    const grid = document.getElementById('galleryGrid');
+    grid.innerHTML = '';
+    payers.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.onclick = () => loadPayer(p.name);
+      card.innerHTML = `<img src="${p.logo}" class="grid-logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'">
+                        <div class="grid-label">${p.name}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function loadAllCards() {
+    switchLocalView('galleryView');
+    document.getElementById('galleryTitle').innerText = "Browse by ID Card";
+    document.getElementById('galleryGrid').innerHTML = '<p style="text-align:center;">Loading ID cards...</p>';
+    google.script.run.withSuccessHandler(renderCardGrid).getAllCardsData();
+  }
+
+  function renderCardGrid(cards) {
+    const grid = document.getElementById('galleryGrid');
+    grid.innerHTML = '';
+    if (cards.length === 0) { grid.innerHTML = '<p style="text-align:center;">No ID cards found.</p>'; return; }
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.onclick = () => loadPayer(c.payerName);
+      card.innerHTML = `<img src="${c.cardUrl}" class="grid-card-img"><div class="grid-label">${c.payerName}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function loadPayer(name) {
+    switchLocalView('detailView');
+    document.getElementById('detailContent').innerHTML = '<p style="text-align:center;">Fetching details...</p>';
+    google.script.run.withSuccessHandler(renderDetail).getPayerDetails(name);
+  }
+
+  function renderDetail(data) {
+    const content = document.getElementById('detailContent');
+    content.innerHTML = '';
+    let headerLogo = (data.entries[0] && data.entries[0].logo) ? data.entries[0].logo : '';
+    let html = `<div class="detail-card"><div class="detail-header">${headerLogo ? `<img src="${headerLogo}" class="detail-logo">` : ''}<h1 style="margin:0; font-size:24px;">${data.payer}</h1></div><div class="detail-body">`;
+    data.entries.forEach(entry => {
+      let formattedNotes = '';
+      if (entry.notes) {
+         let rawLines = entry.notes.toString().split('•');
+         let processedLines = rawLines.map(line => {
+             line = line.trim(); if (!line) return null;
+             let linkMatch = line.match(/^(.*?):\s*(https?:\/\/\S+)/i);
+             if (linkMatch) { return `<a href="${linkMatch[2].trim()}" target="_blank" class="smart-link">${linkMatch[1].trim()} 🔗</a>`; }
+             return line;
+         }).filter(l => l !== null);
+         if (processedLines.length > 0) { formattedNotes = '<div class="note-line">' + processedLines.join('</div><div class="note-line">') + '</div>'; }
+      }
+      let linkBtn = entry.portalUrl ? `<a href="${entry.portalUrl}" target="_blank" class="btn-link">GO TO PORTAL ➔</a>` : `<span class="btn-link btn-disabled">NO LINK</span>`;
+      html += `<div class="row-entry">
+          <div class="portal-section"><span class="portal-name">🌐 ${entry.portalName || 'Portal Link'}</span>${linkBtn}</div>
+          ${entry.userPass ? `<div class="credentials"><strong>🔑 ACCESS CREDENTIALS:</strong><br>${entry.userPass}</div>` : ''}
+          ${formattedNotes ? `<div class="notes-container"><span class="notes-title">📝 NOTES:</span>${formattedNotes}</div>` : ''}
+          ${entry.cards && entry.cards.length > 0 ? `<div style="margin-top:15px; font-weight:bold; color:#555;">📸 ID CARDS:</div><div class="card-gallery">${entry.cards.map(url => `<img src="${url}" class="card-thumb" onclick="window.open('${url}')">`).join('')}</div>` : ''}
+        </div>`;
+    });
+    html += `</div></div>`;
+    content.innerHTML = html;
+  }
+
+  function switchLocalView(viewId) {
+    ['searchView', 'galleryView', 'detailView'].forEach(id => { document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none'; });
+    if(viewId === 'searchView') { document.getElementById('resultsList').innerHTML = ''; document.getElementById('queryInput').value = ''; }
+  }
+  function showSearch() { switchLocalView('searchView'); }
+
+  // --- MÓDULO: PROVIDERS ---
+
+  let allProvidersData = [];
+  let pendingOfficeFilter = null;
+
+  function loadProviders() {
+    google.script.run.withSuccessHandler(renderProviders).getProvidersData();
+  }
+
+  function renderProviders(data) {
+    allProvidersData = data; 
+    populateLocations(data); populateServices(data); populateLanguages(data);
+    
+    if (pendingOfficeFilter) {
+       const select = document.getElementById('locationFilter');
+       let bestMatch = "";
+       for (let i = 0; i < select.options.length; i++) {
+         let optVal = select.options[i].value;
+         if (optVal && pendingOfficeFilter.includes(optVal)) { bestMatch = optVal; break; }
+       }
+       if (bestMatch) select.value = bestMatch;
+       pendingOfficeFilter = null;
+    }
+    filterProviders();
+  }
+
+  function formatSchedule(text) {
+    if (!text || text === '-' || text === '') return '-';
+    let match = text.match(/\d/); 
+    if (match) {
+      let splitIndex = match.index;
+      let location = text.substring(0, splitIndex).trim();
+      let time = text.substring(splitIndex);
+      return location.substring(0, 5) + " " + time;
+    }
+    return text;
+  }
+
+  function populateLanguages(data) {
+    const langSet = new Set();
+    data.forEach(p => { if (p.languages) p.languages.split(',').forEach(l => langSet.add(l.trim())); });
+    const select = document.getElementById('langFilter'); select.innerHTML = '<option value="">All Languages</option>';
+    Array.from(langSet).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.innerText = l; select.appendChild(opt); });
+  }
+
+  function populateServices(data) {
+    const serviceSet = new Set();
+    data.forEach(p => { if (p.services) p.services.forEach(s => serviceSet.add(s)); });
+    const select = document.getElementById('serviceFilter'); select.innerHTML = '<option value="">All Services</option>';
+    Array.from(serviceSet).sort().forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.innerText = s; select.appendChild(opt); });
+  }
+
+  function populateLocations(data) {
+    const locationSet = new Set();
+    data.forEach(p => {
+      Object.values(p.schedule).forEach(scheduleString => {
+        if (scheduleString && scheduleString !== '-' && scheduleString.trim() !== '') {
+          let locName = scheduleString.split(/[0-9]/)[0].trim().replace(/[-:]/g, '').trim();
+          if (locName.length > 2) locationSet.add(locName);
+        }
+      });
+    });
+    const select = document.getElementById('locationFilter'); select.innerHTML = '<option value="">All Locations</option>';
+    Array.from(locationSet).sort().forEach(loc => { const opt = document.createElement('option'); opt.value = loc; opt.innerText = loc; select.appendChild(opt); });
+  }
+
+  function filterProviders() {
+    const text = document.getElementById('providerSearchInput').value.toLowerCase();
+    const service = document.getElementById('serviceFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    const lang = document.getElementById('langFilter').value;
+    const sex = document.getElementById('sexFilter').value;
+    
+    const container = document.getElementById('providersList');
+    container.innerHTML = '';
+
+    const filtered = allProvidersData.filter(p => {
+      const matchText = p.name.toLowerCase().includes(text);
+      const matchService = service === "" || p.services.includes(service);
+      const matchLoc = location === "" || Object.values(p.schedule).some(val => String(val).includes(location));
+      const matchSex = sex === "" || p.sex === sex;
+      const matchLang = lang === "" || (p.languages && p.languages.includes(lang));
+      return matchText && matchService && matchLoc && matchSex && matchLang;
+    });
+
+    if (filtered.length === 0) { container.innerHTML = '<p>No providers found.</p>'; return; }
+
+    filtered.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'static-card'; card.style.cursor = "default";
+      let servicesHtml = p.services.map(s => `<span style="background:#e8f0fe; color:#004b8d; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px;">${s}</span>`).join('');
+      let sexHtml = p.sex === 'F' ? `<span style="background:#fce4ec; color:#c2185b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♀ F</span>` : (p.sex === 'M' ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♂ M</span>` : '');
+      let langHtml = p.languages ? `<div style="font-size:12px; color:#555; margin-top:2px;">🗣️ <strong>Languages:</strong> ${p.languages}</div>` : '';
+
+      card.innerHTML = `
+        <div style="padding:15px; display:flex; gap:15px;">
+           <img src="${p.photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+           <div style="flex:1;">
+             <div style="display:block; font-weight:bold; color:#004b8d; font-size:16px; line-height:1.4;">
+                ${p.name} ${sexHtml}
+              </div>
+             <div style="font-size:12px; color:#666; margin-top:2px;">MA: <strong>${p.ma}</strong></div>
+             ${langHtml}<div style="margin-top:5px;">${servicesHtml}</div>
+           </div>
+        </div>
+        <div style="background:#f9f9f9; padding:10px; font-size:12px; border-top:1px solid #eee;">
+           <div><strong>NPI:</strong> ${p.npi} | <strong>DEA:</strong> ${p.dea}</div>
+           ${p.notes ? `<div style="color:#d93025; margin-top:5px;">⚠️ ${p.notes}</div>` : ''}
+        </div>
+        <div style="padding:10px; font-size:11px; border-top:1px solid #eee;">
+           <div style="font-weight:bold; margin-bottom:5px;">📅 Weekly Schedule:</div>
+           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+              <div><strong>Mon:</strong> ${formatSchedule(p.schedule.Mon)}</div><div><strong>Tue:</strong> ${formatSchedule(p.schedule.Tue)}</div>
+              <div><strong>Wed:</strong> ${formatSchedule(p.schedule.Wed)}</div><div><strong>Thu:</strong> ${formatSchedule(p.schedule.Thu)}</div>
+              <div><strong>Fri:</strong> ${formatSchedule(p.schedule.Fri)}</div>
+           </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // --- MÓDULO: DOCS ---
+
+  let allDocsData = [];
+
+  function loadDocs() {
+    google.script.run.withSuccessHandler(renderDocs).getCommonDocsData();
+  }
+
+  function renderDocs(data) {
+    allDocsData = data; 
+    filterDocs();
+  }
+
+  function filterDocs() {
+    const text = document.getElementById('docSearchInput').value.toLowerCase();
+    const container = document.getElementById('docsListContainer'); container.innerHTML = '';
+    const filtered = allDocsData.filter(d => d.name.toLowerCase().includes(text));
+    if (filtered.length === 0) { container.innerHTML = '<p style="text-align:center; color:#888;">No documents found.</p>'; return; }
+    filtered.forEach(d => {
+      const card = document.createElement('a');
+      card.className = 'doc-card'; card.href = d.url; card.target = '_blank';
+      card.innerHTML = `<img src="${d.icon}" class="doc-icon"><div class="doc-info"><div class="doc-title">${d.name}</div><div class="doc-link-text">Click to open</div></div><div style="color:#ccc;">➔</div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // --- MÓDULO: OFFICES ---
+  let allOfficesData = []; // Variable global
+
+  function loadOffices() {
+    const container = document.getElementById('officesListContainer');
+    const nameSelect = document.getElementById('filterOfficeName');
+    const servSelect = document.getElementById('filterOfficeService');
+
+    // Llamada ÚNICA al servidor (Ultrarrápida gracias al Caché)
+    google.script.run.withSuccessHandler(function(offices) {
+      allOfficesData = offices;
+      
+      // --- LLENAR OFICINAS (Inicia directo en All Locations) ---
+      nameSelect.innerHTML = '<option value="">All Locations</option>';
+      nameSelect.disabled = false;
+      nameSelect.style.background = "#fff";
+      nameSelect.style.cursor = "pointer";
+
+      offices.map(o => o.name).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        nameSelect.appendChild(opt);
+      });
+
+      // --- EXTRAER Y LLENAR SERVICIOS (Desde el Frontend) ---
+      let servicesSet = new Set();
+      offices.forEach(off => {
+        if (off.services) {
+          let matches = off.services.match(/<b>(.*?)<\/b>/g);
+          if (matches) {
+            matches.forEach(m => servicesSet.add(m.replace(/<\/?b>/g, "")));
+          }
+        }
+      });
+
+      servSelect.innerHTML = '<option value="">All Services</option>';
+      servSelect.disabled = false;
+      servSelect.style.background = "#fff";
+      servSelect.style.cursor = "pointer";
+
+      Array.from(servicesSet).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        servSelect.appendChild(opt);
+      });
+
+      // --- RENDERIZAR DIRECTAMENTE TODAS LAS OFICINAS ---
+      renderOffices(offices);
+      
+    }).getOfficesData();
+  }
+
+  function applyOfficeFilters() {
+    const nameSelect = document.getElementById('filterOfficeName');
+    const serviceSelect = document.getElementById('filterOfficeService');
+    const accessCheck = document.getElementById('filterOfficeAccess');
+
+    const selectedOffice = nameSelect.value;
+    const selectedService = serviceSelect.value.toLowerCase();
+    const isAccessibleOnly = accessCheck.checked;
+
+    // Proceso de filtrado normal y directo
+    const filtered = allOfficesData.filter(off => {
+      // 1. Filtro Nombre
+      const matchName = selectedOffice === "" || off.name === selectedOffice;
+      
+      // 2. Filtro Servicio
+      const matchService = selectedService === "" || (off.services && off.services.toLowerCase().includes(selectedService));
+      
+      // 3. Filtro Accesibilidad
+      let accStatus = off.wheelchair === true || String(off.wheelchair).toLowerCase() === 'yes' || String(off.wheelchair).toLowerCase() === 'true';
+      const matchAccess = !isAccessibleOnly || accStatus;
+
+      return matchName && matchService && matchAccess;
+    });
+
+    renderOffices(filtered);
+  }
+
+  function renderOffices(offices) {
+    const container = document.getElementById('officesListContainer'); container.innerHTML = '';
+    if (offices.length === 0) { container.innerHTML = '<p>No open offices found.</p>'; return; }
+    
+    offices.forEach(off => {
+      const div = document.createElement('div');
+      div.className = 'office-card';
+      
+      let accessBadge = off.wheelchair === true || String(off.wheelchair).toLowerCase() === 'yes' || String(off.wheelchair).toLowerCase() === 'true' 
+        ? `<span class="badge-feat" style="background:#e8f5e9; color:#2e7d32;">♿ Wheelchair Accessible</span>`
+        : `<span class="badge-feat" style="background:#ffebee; color:#c62828;">⚠️ Not Accessible</span>`;
+        
+      let mapBtns = '';
+      if (off.mapLink) mapBtns += `<a href="${off.mapLink}" target="_blank" class="btn-map">🗺️ Google Maps</a>`;
+      if (off.streetView) mapBtns += `<a href="${off.streetView}" target="_blank" class="btn-map">👀 Street View</a>`;
+
+      div.innerHTML = `
+        <div class="office-img-container"><img src="${off.photo}" class="office-img"></div>
+        <div class="office-content">
+          <div class="office-title">${off.name}</div>
+          <div class="office-address">📍 ${off.address}</div>
+          <div class="feature-badges">${accessBadge}${off.parking ? `<span class="badge-feat">🚗 ${off.parking}</span>` : ''}</div>
+          ${off.notes ? `<div style="font-size:13px; color:#666; font-style:italic; margin-bottom:10px;">📝 "${off.notes}"</div>` : ''}
+          
+          <div style="font-size:13px; color:#444; margin-bottom:10px; line-height: 1.5;">
+             ${off.manager ? `<div style="color: #1976d2;">🧑‍💼 <strong>Manager:</strong> ${off.manager}</div>` : ''}
+             ${off.phone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${off.phone}">${off.phone}</a></div>` : ''}
+             ${off.fax ? `<div>📠 <strong>Fax:</strong> ${off.fax}</div>` : ''}
+          </div>
+
+          ${off.services ? `
+          <div style="margin-bottom:15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
+            <div style="background: #f5f5f5; padding: 6px 10px; font-weight: bold; font-size: 13px; color: #333; border-bottom: 1px solid #e0e0e0;">
+               🩺 Services Offered
+            </div>
+            <div style="padding: 10px; max-height: 140px; overflow-y: auto; font-size: 13px; line-height: 1.4; color: #222; background: #fafafa;">
+               ${off.services}
+            </div>
+          </div>` : ''}
+          
+          <div class="btn-row">${mapBtns}</div>
+          <div onclick="goToProvidersByOffice('${off.name}')" class="btn-provider-link">👨‍⚕️ View Providers in this Office</div>
+        </div>`;
+      container.appendChild(div);
+    });
+    // SCROLL FIX CRUCIAL: Forzar subida tras renderizar
+    window.scrollTo(0, 0);
+  }
+
+  function goToProvidersByOffice(officeName) {
+    pendingOfficeFilter = officeName;
+    openModule('module_providers');
+  }
+
+  // --- MÓDULO: MEDICAMENTOS ---
+
+  function searchMedication() {
+    const q = document.getElementById('medInput').value.trim();
+    if (!q) return;
+
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = `
+      <div style="margin-top:40px;">
+        <div class="loading-pulse">🔍 Searching Database & Protocols...</div>
+        <p style="text-align:center; font-size:12px; color:#999;">If exact match isn't found, AI will analyze the drug type.</p>
+      </div>`;
+
+    // --- AQUÍ ESTÁ LA CORRECCIÓN ---
+    google.script.run
+      .withSuccessHandler(renderMedResult)
+      .withFailureHandler(onSearchError) // <--- ESTO FALTABA
+      .searchMedication(q);
+  }
+
+  // Nueva función para mostrar el error en pantalla
+  function onSearchError(error) {
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = `
+      <div style="text-align:center; margin-top:30px; color:#d93025; padding:20px; border:1px solid #d93025; border-radius:8px; background:#fff0f0;">
+         <h3>⚠️ System Error</h3>
+         <p>Something went wrong on the server.</p>
+         <pre style="text-align:left; background:#eee; padding:10px; overflow:auto;">${error.message}</pre>
+      </div>`;
+  }
+
+  function renderMedResult(result) {
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = '';
+
+    if (!result.found) {
+      container.innerHTML = `
+        <div style="margin-top:25px; padding: 20px; border: 1px solid #fbbc04; border-radius: 8px; background: #fffde7; color: #333; font-family: sans-serif;">
+           
+           <div style="text-align: center; margin-bottom: 15px;">
+             <h3 style="color: #d93025; margin: 0 0 5px 0;">❌ No Specific Protocol Found</h3>
+             <p style="font-size: 14px; margin: 0;">The medication "<strong>${result.medication}</strong>" does not match our specific category protocols.</p>
+           </div>
+
+           <div style="background: #ffffff; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+               <h4 style="margin: 0 0 10px 0; color: #1976d2; font-size: 14px;">📋 General Refill Protocol (For Unlisted Medications):</h4>
+               <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #444;">
+                   <li><span style="color:#2e7d32; font-weight:bold;">✔ Seen in the last month:</span> Send a message to the provider requesting the refill.</li>
+                   <li><span style="color:#c62828; font-weight:bold;">✘ Not seen in the last month:</span> Schedule a patient appointment for the refill.</li>
+               </ul>
+           </div>
+
+           <div style="font-size: 11px; color: #666; margin-top: 15px; line-height: 1.4; border-top: 1px solid #f5ce5a; padding-top: 10px;">
+              <strong>*Note on Protocols:</strong> Specific AI protocols currently exist ONLY for the following categories: 
+              <em>Diabetic Meds, Cholesterol Meds, Blood Pressure Meds, Thyroid Meds, Blood Thinners, Asthma/Nebulizer, Weight Loss, Narcotics/Controlled, Migraine, Depression, Diuretics, Antipsychotics, and Ulcer.</em>
+           </div>
+           
+           ${result.error ? `<div style="font-size:10px; color:#999; margin-top:10px; text-align:center;">Debug: ${result.error}</div>` : ''}
+        </div>`;
+      return;
+    }
+
+    // Preparar Badges
+    let badge = '';
+    let subTitle = '';
+    
+    if (result.method === 'EXACT_MATCH') {
+      badge = `<span class="badge-exact">✅ EXACT MATCH</span>`;
+      subTitle = `<div style="color:#666; font-size:14px; margin-top:5px;">Category: <strong>${result.category}</strong></div>`;
+    } else {
+      badge = `<span class="badge-ai">✨ AI INFERENCE</span>`;
+      subTitle = `
+        <div style="color:#666; font-size:14px; margin-top:5px;">
+           Detected: <strong>${result.detectedAs}</strong><br>
+           Matched to Category: <strong>${result.category}</strong>
+        </div>`;
+    }
+
+    // HTML de la tarjeta
+    container.innerHTML = `
+      <div class="med-result-card">
+        <div class="med-header">
+           <div>
+             <div class="med-name">${result.medication}</div>
+             ${subTitle}
+           </div>
+           <div>${badge}</div>
+        </div>
+        
+        <div style="font-weight:bold; margin-bottom:10px; color:#5d4037;">📋 REFILL CRITERIA & PROTOCOL:</div>
+        <div class="criteria-box">${result.criteria}</div>
+
+        ${result.method === 'AI_INFERENCE' ? `<div class="ai-disclaimer">⚠️ Note: Classification generated by AI. Always verify patient history.</div>` : ''}
+      </div>
+    `;
+    
+    // Scroll fix por si acaso
+    window.scrollTo(0, 0);
+  }
+
+  // --- MÓDULO: AI SEARCH BAR ---
+
+  function handleSmartSearch(event) {
+    if (event.key === 'Enter') {
+      executeSmartSearch();
+    }
+  }
+
+  let aiChatHistory = [];
+
+  // 2. Función para borrar la memoria (muy importante para los VAs)
+  function clearAiChat() {
+    aiChatHistory = [];
+    document.getElementById('smartSearchOutput').innerHTML = '<div style="text-align:center; color:#999; margin-top: 20px;">Chat history cleared. Start a new topic!</div>';
+    document.getElementById('smartSearchInput').value = '';
+  }
+
+  // 3. El nuevo motor de búsqueda conversacional
+  function executeSmartSearch() {
+      const input = document.getElementById('smartSearchInput');
+      const output = document.getElementById('smartSearchOutput');
+      const btn = document.getElementById('smartSearchBtn');
+      const query = input.value.trim();
+      
+      if (!query) return;
+
+      // Guardamos la pregunta del usuario en el historial
+      aiChatHistory.push({ role: "user", parts: [{ text: query }] });
+      
+      // Limpiamos la barra para que el VA pueda seguir escribiendo
+      input.value = '';
+      
+      // Dibujamos el chat en pantalla con formato de burbujas
+      renderChatUI();
+
+      // Bloqueamos el botón y mostramos el indicador de carga al final del chat
+      btn.disabled = true;
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'ai-loading';
+      loadingDiv.innerHTML = '<div style="color:#666; margin-top:10px; font-style:italic;">⏳ Reading documents and analyzing data...</div>';
+      output.appendChild(loadingDiv);
+      output.scrollTop = output.scrollHeight; // Auto-scroll hacia abajo
+
+      // Llamamos al servidor, pero ahora le enviamos el HISTORIAL COMPLETO
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          
+          // Guardamos la respuesta pura de la IA en la memoria
+          aiChatHistory.push({ role: "model", parts: [{ text: result.response }] });
+          
+          // Volvemos a dibujar el chat (ahora incluirá la respuesta y el disclaimer)
+          renderChatUI(result.sourcesUsed); 
+        })
+        .withFailureHandler(function(error) {
+          btn.disabled = false;
+          document.getElementById('ai-loading').innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+        })
+        .processSmartQuery(aiChatHistory, query); // OJO AQUÍ: Enviamos 2 cosas ahora
+  }
+
+  // 4. Función para dibujar las burbujas de chat
+  function renderChatUI(sourcesUsed = null) {
+    const output = document.getElementById('smartSearchOutput');
+    output.style.display = 'block';
+    output.innerHTML = ''; // Limpiamos la pantalla
+
+    aiChatHistory.forEach(msg => {
+      const isUser = msg.role === 'user';
+      
+      // Diseño de Burbuja de WhatsApp
+      const bubbleStyle = isUser 
+        ? 'background: #e3f2fd; color: #004b8d; margin-left: auto; border-bottom-right-radius: 0;' // Usuario (Derecha, Azul)
+        : 'background: #f8f9fa; color: #333; margin-right: auto; border-bottom-left-radius: 0; border: 1px solid #e0e0e0;'; // IA (Izquierda, Gris)
+      
+      const align = isUser ? 'text-align: right;' : 'text-align: left;';
+      const label = isUser ? '<strong>🧑‍💻 You</strong><br>' : '<strong>✨ AI Assistant</strong><br>';
+
+      output.innerHTML += `
+        <div style="width: 100%; margin-bottom: 15px; ${align}">
+          <div style="display: inline-block; max-width: 85%; padding: 12px 16px; border-radius: 12px; text-align: left; ${bubbleStyle}">
+            ${label}
+            <div style="margin-top: 5px; line-height: 1.5;">${msg.parts[0].text}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    // Si la IA acaba de responder, le pegamos el Disclaimer al final del último mensaje
+    if (aiChatHistory.length > 0 && aiChatHistory[aiChatHistory.length - 1].role === 'model') {
+      const disclaimerHtml = `
+        <div style="margin-top: 15px; padding: 12px; background-color: #fff8e1; border: 1px solid #ffe082; border-left: 4px solid #ffb300; border-radius: 4px; font-size: 11px; color: #5d4037; line-height: 1.5;">
+          <strong>⚠️ ATTENTION - AI-GENERATED RESPONSE:</strong><br>
+          This information must always be verified against official protocols. If you have any doubts about a procedure, <strong>consult your manager</strong> before taking action.<br><br>
+          <em>Suspect an error?</em> Take a <strong>screenshot</strong> clearly showing your prompt and this response, and report it immediately to the technical team.
+        </div>
+      `;
+      output.innerHTML += disclaimerHtml;
+    }
+
+    // Auto-scroll al fondo para ver el último mensaje
+    output.scrollTop = output.scrollHeight;
+  }
+
+</script>
+</body>
+</html>

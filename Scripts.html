@@ -1,0 +1,660 @@
+<script>
+  // --- INICIALIZACIÓN ---
+  window.onload = function() { loadModules(); };
+
+  function loadModules() {
+    google.script.run.withSuccessHandler(renderDashboard).getAppModules();
+  }
+
+  function renderDashboard(modules) {
+    const grid = document.getElementById('moduleGrid');
+    grid.innerHTML = '';
+    modules.forEach(mod => {
+      const card = document.createElement('div');
+      card.className = 'module-card' + (mod.locked ? ' locked' : '');
+      if (!mod.locked) { card.onclick = () => openModule(mod.id); }
+      card.innerHTML = `
+        <div class="module-img-box"><img src="${mod.image}" class="module-img"></div>
+        <div class="module-content">
+          <div class="module-title">${mod.name}</div>
+          <div class="module-desc">${mod.description}</div>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // --- NAVEGACIÓN Y SCROLL ---
+  function goHome() {
+    ['insuranceModule','providersModule','docsModule','officesModule','medsModule','view_module_ai'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('dashboardView').style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function openModule(moduleId) {
+    // 1. Ocultar todo
+    ['dashboardView','insuranceModule','providersModule','docsModule','officesModule', 'medsModule','view_module_ai'].forEach(id => {
+       const el = document.getElementById(id);
+       if (el) el.style.display = 'none';
+    });
+
+    // 2. Reset Scroll (Para asegurar posición inicial)
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0; 
+    document.documentElement.scrollTop = 0;
+
+    // 3. Mostrar módulo
+    if (moduleId === 'module_insurance') {
+      document.getElementById('insuranceModule').style.display = 'block';
+    } else if (moduleId === 'module_providers') {
+      document.getElementById('providersModule').style.display = 'block';
+      if (allProvidersData && allProvidersData.length > 0) {
+         renderProviders(allProvidersData);
+      } else {
+         loadProviders();
+      }
+    } else if (moduleId === 'module_docs') {
+      document.getElementById('docsModule').style.display = 'block';
+      loadDocs();
+    } else if (moduleId === 'module_offices') {
+      document.getElementById('officesModule').style.display = 'block';
+      loadOffices();
+    } else if (moduleId === 'module_meds') { 
+       document.getElementById('medsModule').style.display = 'block';
+       document.getElementById('medResultContainer').innerHTML = ''; 
+       document.getElementById('medInput').value = '';
+       document.getElementById('medInput').focus();
+    }else if (moduleId === 'module_ai') {
+      document.getElementById('view_module_ai').style.display = 'flex';
+    }
+  }
+
+  // --- MÓDULO: INSURANCE ---
+
+  function doSearch() {
+    const q = document.getElementById('queryInput').value.trim();
+    if (!q) return;
+    document.getElementById('resultsList').innerHTML = '<p style="text-align:center; color:#999;">Searching...</p>';
+    google.script.run.withSuccessHandler(renderSearchResults).findInsuranceOptions(q);
+  }
+
+  function renderSearchResults(options) {
+    const list = document.getElementById('resultsList');
+    list.innerHTML = '';
+    if (options.length === 0) { list.innerHTML = '<p style="text-align:center; color:#d93025;">No results found.</p>'; return; }
+    options.forEach(opt => {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.onclick = () => loadPayer(opt.name);
+      let noteHtml = opt.matchType === 'note' ? `<div class="note-match">⚠️ Found in notes: "${opt.noteSnippet}"</div>` : '';
+      div.innerHTML = `<div class="logo-box"><img src="${opt.logo}" class="logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'"></div>
+                       <div class="info-box"><div class="payer-name">${opt.name}</div>${noteHtml}</div>`;
+      list.appendChild(div);
+    });
+  }
+
+  function loadAllPayers() {
+    switchLocalView('galleryView');
+    document.getElementById('galleryTitle').innerText = "All Insurance Options";
+    document.getElementById('galleryGrid').innerHTML = '<p style="text-align:center;">Loading logos...</p>';
+    google.script.run.withSuccessHandler(renderPayerGrid).getAllPayersData();
+  }
+
+  function renderPayerGrid(payers) {
+    const grid = document.getElementById('galleryGrid');
+    grid.innerHTML = '';
+    payers.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.onclick = () => loadPayer(p.name);
+      card.innerHTML = `<img src="${p.logo}" class="grid-logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'">
+                        <div class="grid-label">${p.name}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function loadAllCards() {
+    switchLocalView('galleryView');
+    document.getElementById('galleryTitle').innerText = "Browse by ID Card";
+    document.getElementById('galleryGrid').innerHTML = '<p style="text-align:center;">Loading ID cards...</p>';
+    google.script.run.withSuccessHandler(renderCardGrid).getAllCardsData();
+  }
+
+  function renderCardGrid(cards) {
+    const grid = document.getElementById('galleryGrid');
+    grid.innerHTML = '';
+    if (cards.length === 0) { grid.innerHTML = '<p style="text-align:center;">No ID cards found.</p>'; return; }
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.onclick = () => loadPayer(c.payerName);
+      card.innerHTML = `<img src="${c.cardUrl}" class="grid-card-img"><div class="grid-label">${c.payerName}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function loadPayer(name) {
+    switchLocalView('detailView');
+    document.getElementById('detailContent').innerHTML = '<p style="text-align:center;">Fetching details...</p>';
+    google.script.run.withSuccessHandler(renderDetail).getPayerDetails(name);
+  }
+
+  function renderDetail(data) {
+    const content = document.getElementById('detailContent');
+    content.innerHTML = '';
+    let headerLogo = (data.entries[0] && data.entries[0].logo) ? data.entries[0].logo : '';
+    let html = `<div class="detail-card"><div class="detail-header">${headerLogo ? `<img src="${headerLogo}" class="detail-logo">` : ''}<h1 style="margin:0; font-size:24px;">${data.payer}</h1></div><div class="detail-body">`;
+    data.entries.forEach(entry => {
+      let formattedNotes = '';
+      if (entry.notes) {
+         let rawLines = entry.notes.toString().split('•');
+         let processedLines = rawLines.map(line => {
+             line = line.trim(); if (!line) return null;
+             let linkMatch = line.match(/^(.*?):\s*(https?:\/\/\S+)/i);
+             if (linkMatch) { return `<a href="${linkMatch[2].trim()}" target="_blank" class="smart-link">${linkMatch[1].trim()} 🔗</a>`; }
+             return line;
+         }).filter(l => l !== null);
+         if (processedLines.length > 0) { formattedNotes = '<div class="note-line">' + processedLines.join('</div><div class="note-line">') + '</div>'; }
+      }
+      let linkBtn = entry.portalUrl ? `<a href="${entry.portalUrl}" target="_blank" class="btn-link">GO TO PORTAL ➔</a>` : `<span class="btn-link btn-disabled">NO LINK</span>`;
+      html += `<div class="row-entry">
+          <div class="portal-section"><span class="portal-name">🌐 ${entry.portalName || 'Portal Link'}</span>${linkBtn}</div>
+          ${entry.userPass ? `<div class="credentials"><strong>🔑 ACCESS CREDENTIALS:</strong><br>${entry.userPass}</div>` : ''}
+          ${formattedNotes ? `<div class="notes-container"><span class="notes-title">📝 NOTES:</span>${formattedNotes}</div>` : ''}
+          ${entry.cards && entry.cards.length > 0 ? `<div style="margin-top:15px; font-weight:bold; color:#555;">📸 ID CARDS:</div><div class="card-gallery">${entry.cards.map(url => `<img src="${url}" class="card-thumb" onclick="window.open('${url}')">`).join('')}</div>` : ''}
+        </div>`;
+    });
+    html += `</div></div>`;
+    content.innerHTML = html;
+  }
+
+  function switchLocalView(viewId) {
+    ['searchView', 'galleryView', 'detailView'].forEach(id => { document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none'; });
+    if(viewId === 'searchView') { document.getElementById('resultsList').innerHTML = ''; document.getElementById('queryInput').value = ''; }
+  }
+  function showSearch() { switchLocalView('searchView'); }
+
+  // --- MÓDULO: PROVIDERS ---
+
+  let allProvidersData = [];
+  let pendingOfficeFilter = null;
+
+  function loadProviders() {
+    google.script.run.withSuccessHandler(renderProviders).getProvidersData();
+  }
+
+  function renderProviders(data) {
+    allProvidersData = data; 
+    populateLocations(data); populateServices(data); populateLanguages(data);
+    
+    if (pendingOfficeFilter) {
+       const select = document.getElementById('locationFilter');
+       let bestMatch = "";
+       for (let i = 0; i < select.options.length; i++) {
+         let optVal = select.options[i].value;
+         if (optVal && pendingOfficeFilter.includes(optVal)) { bestMatch = optVal; break; }
+       }
+       if (bestMatch) select.value = bestMatch;
+       pendingOfficeFilter = null;
+    }
+    filterProviders();
+  }
+
+  function formatSchedule(text) {
+    if (!text || text === '-' || text === '') return '-';
+    let match = text.match(/\d/); 
+    if (match) {
+      let splitIndex = match.index;
+      let location = text.substring(0, splitIndex).trim();
+      let time = text.substring(splitIndex);
+      return location.substring(0, 5) + " " + time;
+    }
+    return text;
+  }
+
+  function populateLanguages(data) {
+    const langSet = new Set();
+    data.forEach(p => { if (p.languages) p.languages.split(',').forEach(l => langSet.add(l.trim())); });
+    const select = document.getElementById('langFilter'); select.innerHTML = '<option value="">All Languages</option>';
+    Array.from(langSet).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.innerText = l; select.appendChild(opt); });
+  }
+
+  function populateServices(data) {
+    const serviceSet = new Set();
+    data.forEach(p => { if (p.services) p.services.forEach(s => serviceSet.add(s)); });
+    const select = document.getElementById('serviceFilter'); select.innerHTML = '<option value="">All Services</option>';
+    Array.from(serviceSet).sort().forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.innerText = s; select.appendChild(opt); });
+  }
+
+  function populateLocations(data) {
+    const locationSet = new Set();
+    data.forEach(p => {
+      Object.values(p.schedule).forEach(scheduleString => {
+        if (scheduleString && scheduleString !== '-' && scheduleString.trim() !== '') {
+          let locName = scheduleString.split(/[0-9]/)[0].trim().replace(/[-:]/g, '').trim();
+          if (locName.length > 2) locationSet.add(locName);
+        }
+      });
+    });
+    const select = document.getElementById('locationFilter'); select.innerHTML = '<option value="">All Locations</option>';
+    Array.from(locationSet).sort().forEach(loc => { const opt = document.createElement('option'); opt.value = loc; opt.innerText = loc; select.appendChild(opt); });
+  }
+
+  function filterProviders() {
+    const text = document.getElementById('providerSearchInput').value.toLowerCase();
+    const service = document.getElementById('serviceFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    const lang = document.getElementById('langFilter').value;
+    const sex = document.getElementById('sexFilter').value;
+    
+    const container = document.getElementById('providersList');
+    container.innerHTML = '';
+
+    const filtered = allProvidersData.filter(p => {
+      const matchText = p.name.toLowerCase().includes(text);
+      const matchService = service === "" || p.services.includes(service);
+      const matchLoc = location === "" || Object.values(p.schedule).some(val => String(val).includes(location));
+      const matchSex = sex === "" || p.sex === sex;
+      const matchLang = lang === "" || (p.languages && p.languages.includes(lang));
+      return matchText && matchService && matchLoc && matchSex && matchLang;
+    });
+
+    if (filtered.length === 0) { container.innerHTML = '<p>No providers found.</p>'; return; }
+
+    filtered.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'static-card'; card.style.cursor = "default";
+      let servicesHtml = p.services.map(s => `<span style="background:#e8f0fe; color:#004b8d; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px;">${s}</span>`).join('');
+      let sexHtml = p.sex === 'F' ? `<span style="background:#fce4ec; color:#c2185b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♀ F</span>` : (p.sex === 'M' ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♂ M</span>` : '');
+      let langHtml = p.languages ? `<div style="font-size:12px; color:#555; margin-top:2px;">🗣️ <strong>Languages:</strong> ${p.languages}</div>` : '';
+
+      card.innerHTML = `
+        <div style="padding:15px; display:flex; gap:15px;">
+           <img src="${p.photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+           <div style="flex:1;">
+             <div style="display:block; font-weight:bold; color:#004b8d; font-size:16px; line-height:1.4;">
+                ${p.name} ${sexHtml}
+              </div>
+             <div style="font-size:12px; color:#666; margin-top:2px;">MA: <strong>${p.ma}</strong></div>
+             ${langHtml}<div style="margin-top:5px;">${servicesHtml}</div>
+           </div>
+        </div>
+        <div style="background:#f9f9f9; padding:10px; font-size:12px; border-top:1px solid #eee;">
+           <div><strong>NPI:</strong> ${p.npi} | <strong>DEA:</strong> ${p.dea}</div>
+           ${p.notes ? `<div style="color:#d93025; margin-top:5px;">⚠️ ${p.notes}</div>` : ''}
+        </div>
+        <div style="padding:10px; font-size:11px; border-top:1px solid #eee;">
+           <div style="font-weight:bold; margin-bottom:5px;">📅 Weekly Schedule:</div>
+           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+              <div><strong>Mon:</strong> ${formatSchedule(p.schedule.Mon)}</div><div><strong>Tue:</strong> ${formatSchedule(p.schedule.Tue)}</div>
+              <div><strong>Wed:</strong> ${formatSchedule(p.schedule.Wed)}</div><div><strong>Thu:</strong> ${formatSchedule(p.schedule.Thu)}</div>
+              <div><strong>Fri:</strong> ${formatSchedule(p.schedule.Fri)}</div>
+           </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // --- MÓDULO: DOCS ---
+
+  let allDocsData = [];
+
+  function loadDocs() {
+    google.script.run.withSuccessHandler(renderDocs).getCommonDocsData();
+  }
+
+  function renderDocs(data) {
+    allDocsData = data; 
+    filterDocs();
+  }
+
+  function filterDocs() {
+    const text = document.getElementById('docSearchInput').value.toLowerCase();
+    const container = document.getElementById('docsListContainer'); container.innerHTML = '';
+    const filtered = allDocsData.filter(d => d.name.toLowerCase().includes(text));
+    if (filtered.length === 0) { container.innerHTML = '<p style="text-align:center; color:#888;">No documents found.</p>'; return; }
+    filtered.forEach(d => {
+      const card = document.createElement('a');
+      card.className = 'doc-card'; card.href = d.url; card.target = '_blank';
+      card.innerHTML = `<img src="${d.icon}" class="doc-icon"><div class="doc-info"><div class="doc-title">${d.name}</div><div class="doc-link-text">Click to open</div></div><div style="color:#ccc;">➔</div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // --- MÓDULO: OFFICES ---
+  let allOfficesData = []; // Variable global
+
+  function loadOffices() {
+    const container = document.getElementById('officesListContainer');
+    const nameSelect = document.getElementById('filterOfficeName');
+    const servSelect = document.getElementById('filterOfficeService');
+
+    // Llamada ÚNICA al servidor (Ultrarrápida gracias al Caché)
+    google.script.run.withSuccessHandler(function(offices) {
+      allOfficesData = offices;
+      
+      // --- LLENAR OFICINAS (Inicia directo en All Locations) ---
+      nameSelect.innerHTML = '<option value="">All Locations</option>';
+      nameSelect.disabled = false;
+      nameSelect.style.background = "#fff";
+      nameSelect.style.cursor = "pointer";
+
+      offices.map(o => o.name).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        nameSelect.appendChild(opt);
+      });
+
+      // --- EXTRAER Y LLENAR SERVICIOS (Desde el Frontend) ---
+      let servicesSet = new Set();
+      offices.forEach(off => {
+        if (off.services) {
+          let matches = off.services.match(/<b>(.*?)<\/b>/g);
+          if (matches) {
+            matches.forEach(m => servicesSet.add(m.replace(/<\/?b>/g, "")));
+          }
+        }
+      });
+
+      servSelect.innerHTML = '<option value="">All Services</option>';
+      servSelect.disabled = false;
+      servSelect.style.background = "#fff";
+      servSelect.style.cursor = "pointer";
+
+      Array.from(servicesSet).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        servSelect.appendChild(opt);
+      });
+
+      // --- RENDERIZAR DIRECTAMENTE TODAS LAS OFICINAS ---
+      renderOffices(offices);
+      
+    }).getOfficesData();
+  }
+
+  function applyOfficeFilters() {
+    const nameSelect = document.getElementById('filterOfficeName');
+    const serviceSelect = document.getElementById('filterOfficeService');
+    const accessCheck = document.getElementById('filterOfficeAccess');
+
+    const selectedOffice = nameSelect.value;
+    const selectedService = serviceSelect.value.toLowerCase();
+    const isAccessibleOnly = accessCheck.checked;
+
+    // Proceso de filtrado normal y directo
+    const filtered = allOfficesData.filter(off => {
+      // 1. Filtro Nombre
+      const matchName = selectedOffice === "" || off.name === selectedOffice;
+      
+      // 2. Filtro Servicio
+      const matchService = selectedService === "" || (off.services && off.services.toLowerCase().includes(selectedService));
+      
+      // 3. Filtro Accesibilidad
+      let accStatus = off.wheelchair === true || String(off.wheelchair).toLowerCase() === 'yes' || String(off.wheelchair).toLowerCase() === 'true';
+      const matchAccess = !isAccessibleOnly || accStatus;
+
+      return matchName && matchService && matchAccess;
+    });
+
+    renderOffices(filtered);
+  }
+
+  function renderOffices(offices) {
+    const container = document.getElementById('officesListContainer'); container.innerHTML = '';
+    if (offices.length === 0) { container.innerHTML = '<p>No open offices found.</p>'; return; }
+    
+    offices.forEach(off => {
+      const div = document.createElement('div');
+      div.className = 'office-card';
+      
+      let accessBadge = off.wheelchair === true || String(off.wheelchair).toLowerCase() === 'yes' || String(off.wheelchair).toLowerCase() === 'true' 
+        ? `<span class="badge-feat" style="background:#e8f5e9; color:#2e7d32;">♿ Wheelchair Accessible</span>`
+        : `<span class="badge-feat" style="background:#ffebee; color:#c62828;">⚠️ Not Accessible</span>`;
+        
+      let mapBtns = '';
+      if (off.mapLink) mapBtns += `<a href="${off.mapLink}" target="_blank" class="btn-map">🗺️ Google Maps</a>`;
+      if (off.streetView) mapBtns += `<a href="${off.streetView}" target="_blank" class="btn-map">👀 Street View</a>`;
+
+      div.innerHTML = `
+        <div class="office-img-container"><img src="${off.photo}" class="office-img"></div>
+        <div class="office-content">
+          <div class="office-title">${off.name}</div>
+          <div class="office-address">📍 ${off.address}</div>
+          <div class="feature-badges">${accessBadge}${off.parking ? `<span class="badge-feat">🚗 ${off.parking}</span>` : ''}</div>
+          ${off.notes ? `<div style="font-size:13px; color:#666; font-style:italic; margin-bottom:10px;">📝 "${off.notes}"</div>` : ''}
+          
+          <div style="font-size:13px; color:#444; margin-bottom:10px; line-height: 1.5;">
+             ${off.manager ? `<div style="color: #1976d2;">🧑‍💼 <strong>Manager:</strong> ${off.manager}</div>` : ''}
+             ${off.phone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${off.phone}">${off.phone}</a></div>` : ''}
+             ${off.fax ? `<div>📠 <strong>Fax:</strong> ${off.fax}</div>` : ''}
+          </div>
+
+          ${off.services ? `
+          <div style="margin-bottom:15px; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
+            <div style="background: #f5f5f5; padding: 6px 10px; font-weight: bold; font-size: 13px; color: #333; border-bottom: 1px solid #e0e0e0;">
+               🩺 Services Offered
+            </div>
+            <div style="padding: 10px; max-height: 140px; overflow-y: auto; font-size: 13px; line-height: 1.4; color: #222; background: #fafafa;">
+               ${off.services}
+            </div>
+          </div>` : ''}
+          
+          <div class="btn-row">${mapBtns}</div>
+          <div onclick="goToProvidersByOffice('${off.name}')" class="btn-provider-link">👨‍⚕️ View Providers in this Office</div>
+        </div>`;
+      container.appendChild(div);
+    });
+    // SCROLL FIX CRUCIAL: Forzar subida tras renderizar
+    window.scrollTo(0, 0);
+  }
+
+  function goToProvidersByOffice(officeName) {
+    pendingOfficeFilter = officeName;
+    openModule('module_providers');
+  }
+
+  // --- MÓDULO: MEDICAMENTOS ---
+
+  function searchMedication() {
+    const q = document.getElementById('medInput').value.trim();
+    if (!q) return;
+
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = `
+      <div style="margin-top:40px;">
+        <div class="loading-pulse">🔍 Searching Database & Protocols...</div>
+        <p style="text-align:center; font-size:12px; color:#999;">If exact match isn't found, AI will analyze the drug type.</p>
+      </div>`;
+
+    // --- AQUÍ ESTÁ LA CORRECCIÓN ---
+    google.script.run
+      .withSuccessHandler(renderMedResult)
+      .withFailureHandler(onSearchError) // <--- ESTO FALTABA
+      .searchMedication(q);
+  }
+
+  // Nueva función para mostrar el error en pantalla
+  function onSearchError(error) {
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = `
+      <div style="text-align:center; margin-top:30px; color:#d93025; padding:20px; border:1px solid #d93025; border-radius:8px; background:#fff0f0;">
+         <h3>⚠️ System Error</h3>
+         <p>Something went wrong on the server.</p>
+         <pre style="text-align:left; background:#eee; padding:10px; overflow:auto;">${error.message}</pre>
+      </div>`;
+  }
+
+  function renderMedResult(result) {
+    const container = document.getElementById('medResultContainer');
+    container.innerHTML = '';
+
+    if (!result.found) {
+      container.innerHTML = `
+        <div style="margin-top:25px; padding: 20px; border: 1px solid #fbbc04; border-radius: 8px; background: #fffde7; color: #333; font-family: sans-serif;">
+           
+           <div style="text-align: center; margin-bottom: 15px;">
+             <h3 style="color: #d93025; margin: 0 0 5px 0;">❌ No Specific Protocol Found</h3>
+             <p style="font-size: 14px; margin: 0;">The medication "<strong>${result.medication}</strong>" does not match our specific category protocols.</p>
+           </div>
+
+           <div style="background: #ffffff; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+               <h4 style="margin: 0 0 10px 0; color: #1976d2; font-size: 14px;">📋 General Refill Protocol (For Unlisted Medications):</h4>
+               <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #444;">
+                   <li><span style="color:#2e7d32; font-weight:bold;">✔ Seen in the last month:</span> Send a message to the provider requesting the refill.</li>
+                   <li><span style="color:#c62828; font-weight:bold;">✘ Not seen in the last month:</span> Schedule a patient appointment for the refill.</li>
+               </ul>
+           </div>
+
+           <div style="font-size: 11px; color: #666; margin-top: 15px; line-height: 1.4; border-top: 1px solid #f5ce5a; padding-top: 10px;">
+              <strong>*Note on Protocols:</strong> Specific AI protocols currently exist ONLY for the following categories: 
+              <em>Diabetic Meds, Cholesterol Meds, Blood Pressure Meds, Thyroid Meds, Blood Thinners, Asthma/Nebulizer, Weight Loss, Narcotics/Controlled, Migraine, Depression, Diuretics, Antipsychotics, and Ulcer.</em>
+           </div>
+           
+           ${result.error ? `<div style="font-size:10px; color:#999; margin-top:10px; text-align:center;">Debug: ${result.error}</div>` : ''}
+        </div>`;
+      return;
+    }
+
+    // Preparar Badges
+    let badge = '';
+    let subTitle = '';
+    
+    if (result.method === 'EXACT_MATCH') {
+      badge = `<span class="badge-exact">✅ EXACT MATCH</span>`;
+      subTitle = `<div style="color:#666; font-size:14px; margin-top:5px;">Category: <strong>${result.category}</strong></div>`;
+    } else {
+      badge = `<span class="badge-ai">✨ AI INFERENCE</span>`;
+      subTitle = `
+        <div style="color:#666; font-size:14px; margin-top:5px;">
+           Detected: <strong>${result.detectedAs}</strong><br>
+           Matched to Category: <strong>${result.category}</strong>
+        </div>`;
+    }
+
+    // HTML de la tarjeta
+    container.innerHTML = `
+      <div class="med-result-card">
+        <div class="med-header">
+           <div>
+             <div class="med-name">${result.medication}</div>
+             ${subTitle}
+           </div>
+           <div>${badge}</div>
+        </div>
+        
+        <div style="font-weight:bold; margin-bottom:10px; color:#5d4037;">📋 REFILL CRITERIA & PROTOCOL:</div>
+        <div class="criteria-box">${result.criteria}</div>
+
+        ${result.method === 'AI_INFERENCE' ? `<div class="ai-disclaimer">⚠️ Note: Classification generated by AI. Always verify patient history.</div>` : ''}
+      </div>
+    `;
+    
+    // Scroll fix por si acaso
+    window.scrollTo(0, 0);
+  }
+
+  // --- MÓDULO: AI SEARCH BAR ---
+
+  function handleSmartSearch(event) {
+    if (event.key === 'Enter') {
+      executeSmartSearch();
+    }
+  }
+
+  let aiChatHistory = [];
+
+  // 2. Función para borrar la memoria (muy importante para los VAs)
+  function clearAiChat() {
+    aiChatHistory = [];
+    document.getElementById('smartSearchOutput').innerHTML = '<div style="text-align:center; color:#999; margin-top: 20px;">Chat history cleared. Start a new topic!</div>';
+    document.getElementById('smartSearchInput').value = '';
+  }
+
+  // 3. El nuevo motor de búsqueda conversacional
+  function executeSmartSearch() {
+      const input = document.getElementById('smartSearchInput');
+      const output = document.getElementById('smartSearchOutput');
+      const btn = document.getElementById('smartSearchBtn');
+      const query = input.value.trim();
+      
+      if (!query) return;
+
+      // Guardamos la pregunta del usuario en el historial
+      aiChatHistory.push({ role: "user", parts: [{ text: query }] });
+      
+      // Limpiamos la barra para que el VA pueda seguir escribiendo
+      input.value = '';
+      
+      // Dibujamos el chat en pantalla con formato de burbujas
+      renderChatUI();
+
+      // Bloqueamos el botón y mostramos el indicador de carga al final del chat
+      btn.disabled = true;
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'ai-loading';
+      loadingDiv.innerHTML = '<div style="color:#666; margin-top:10px; font-style:italic;">⏳ Reading documents and analyzing data...</div>';
+      output.appendChild(loadingDiv);
+      output.scrollTop = output.scrollHeight; // Auto-scroll hacia abajo
+
+      // Llamamos al servidor, pero ahora le enviamos el HISTORIAL COMPLETO
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          
+          // Guardamos la respuesta pura de la IA en la memoria
+          aiChatHistory.push({ role: "model", parts: [{ text: result.response }] });
+          
+          // Volvemos a dibujar el chat (ahora incluirá la respuesta y el disclaimer)
+          renderChatUI(result.sourcesUsed); 
+        })
+        .withFailureHandler(function(error) {
+          btn.disabled = false;
+          document.getElementById('ai-loading').innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+        })
+        .processSmartQuery(aiChatHistory, query); // OJO AQUÍ: Enviamos 2 cosas ahora
+  }
+
+  // 4. Función para dibujar las burbujas de chat
+  function renderChatUI(sourcesUsed = null) {
+    const output = document.getElementById('smartSearchOutput');
+    output.style.display = 'block';
+    output.innerHTML = ''; // Limpiamos la pantalla
+
+    aiChatHistory.forEach(msg => {
+      const isUser = msg.role === 'user';
+      
+      // Diseño de Burbuja de WhatsApp
+      const bubbleStyle = isUser 
+        ? 'background: #e3f2fd; color: #004b8d; margin-left: auto; border-bottom-right-radius: 0;' // Usuario (Derecha, Azul)
+        : 'background: #f8f9fa; color: #333; margin-right: auto; border-bottom-left-radius: 0; border: 1px solid #e0e0e0;'; // IA (Izquierda, Gris)
+      
+      const align = isUser ? 'text-align: right;' : 'text-align: left;';
+      const label = isUser ? '<strong>🧑‍💻 You</strong><br>' : '<strong>✨ AI Assistant</strong><br>';
+
+      output.innerHTML += `
+        <div style="width: 100%; margin-bottom: 15px; ${align}">
+          <div style="display: inline-block; max-width: 85%; padding: 12px 16px; border-radius: 12px; text-align: left; ${bubbleStyle}">
+            ${label}
+            <div style="margin-top: 5px; line-height: 1.5;">${msg.parts[0].text}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    // Si la IA acaba de responder, le pegamos el Disclaimer al final del último mensaje
+    if (aiChatHistory.length > 0 && aiChatHistory[aiChatHistory.length - 1].role === 'model') {
+      const disclaimerHtml = `
+        <div style="margin-top: 15px; padding: 12px; background-color: #fff8e1; border: 1px solid #ffe082; border-left: 4px solid #ffb300; border-radius: 4px; font-size: 11px; color: #5d4037; line-height: 1.5;">
+          <strong>⚠️ ATTENTION - AI-GENERATED RESPONSE:</strong><br>
+          This information must always be verified against official protocols. If you have any doubts about a procedure, <strong>consult your manager</strong> before taking action.<br><br>
+          <em>Suspect an error?</em> Take a <strong>screenshot</strong> clearly showing your prompt and this response, and report it immediately to the technical team.
+        </div>
+      `;
+      output.innerHTML += disclaimerHtml;
+    }
+
+    // Auto-scroll al fondo para ver el último mensaje
+    output.scrollTop = output.scrollHeight;
+  }
+
+</script>

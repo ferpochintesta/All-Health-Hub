@@ -1,0 +1,100 @@
+<style>
+    /* 1. BASE AND SCROLL CONFIGURATION */
+    html, body { width: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; }
+    .app-container { max-width: 800px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-top: 20px; }
+
+    /* 2. GLOBAL COMPONENTS */
+    .content-area { padding: 20px; flex: 1; padding-bottom: 50px; }
+    .back-btn { background: #5f6368; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-bottom: 15px; font-weight: 500; font-size: 13px; }
+    .search-container { text-align: center; margin-bottom: 20px; margin-top: 10px; }
+    .search-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    input { flex: 1; padding: 12px 15px; border: 1px solid #dfe1e5; border-radius: 50px; font-size: 16px; outline: none; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    input:focus { border-color: #004b8d; box-shadow: 0 1px 6px rgba(0,75,141,0.3); }
+    
+    /* 3. BUTTONS */
+    .btn-main { background: #004b8d; color: white; border: none; padding: 0 20px; border-radius: 50px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .action-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .btn-action { background: white; border: 1px solid #dfe1e5; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; color: #555; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 13px; }
+    .btn-link { text-decoration: none; background: #28a745; color: white; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; text-align: center; display: block; box-shadow: 0 2px 4px rgba(40,167,69,0.3); }
+    @media (min-width: 600px) { .btn-link { display: inline-block; padding: 8px 20px; } }
+
+    /* 4. DASHBOARD */
+    .dashboard-grid { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .module-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid #eee; }
+    .module-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); border-color: #004b8d; }
+    .static-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; cursor: default; }
+    .module-img-box { height: 120px; width: 100%; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #f0f0f0; }
+    .module-img { max-height: 80%; max-width: 80%; object-fit: contain; }
+    .module-content { padding: 15px; text-align: center; }
+    .module-title { font-size: 18px; font-weight: 700; color: #004b8d; margin-bottom: 5px; }
+    .module-desc { font-size: 13px; color: #666; line-height: 1.4; }
+
+    /* 5. INSURANCE STYLES */
+    .result-item { background: white; margin-bottom: 12px; border-radius: 12px; padding: 12px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; border-left: 5px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .result-item:hover { transform: translateX(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 5px solid #004b8d; }
+    .logo-box { width: 90px; height: 50px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #f0f0f0; border-radius: 6px; margin-right: 15px; overflow: hidden; flex-shrink: 0; }
+    .logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .info-box { flex: 1; overflow: hidden; }
+    .payer-name { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 3px; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 10px 0; }
+    .grid-card { background: white; border-radius: 10px; overflow: hidden; border: 1px solid #eee; cursor: pointer; transition: 0.2s; text-align: center; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .grid-card:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: #004b8d; }
+    .grid-logo-img { width: 100%; height: 50px; object-fit: contain; margin-bottom: 8px; }
+    .grid-card-img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; margin-bottom: 5px; }
+    .grid-label { font-size: 12px; font-weight: 600; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .detail-header { background: #004b8d; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: white; text-align: center; }
+    @media (min-width: 600px) { .detail-header { flex-direction: row; text-align: left; } }
+    .detail-logo { width: 140px; height: 70px; background: white; border-radius: 8px; padding: 5px; object-fit: contain; }
+    .detail-body { padding: 15px; }
+    .row-entry { border-bottom: 1px solid #f0f0f0; padding-bottom: 25px; margin-bottom: 25px; }
+    .portal-section { display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+    @media (min-width: 600px) { .portal-section { flex-direction: row; align-items: center; justify-content: space-between; } }
+    .credentials { background: #fff8e1; border-left: 4px solid #ffc107; padding: 12px; margin-top: 15px; font-family: 'Courier New', monospace; color: #5d4037; border-radius: 4px; font-size: 13px; word-break: break-all; }
+    .card-gallery { margin-top: 20px; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
+    .card-thumb { height: 90px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+    .note-line:before { content: "•"; position: absolute; left: 0; color: #004b8d; font-weight: bold; }
+    .note-line { display: block; margin-bottom: 8px; padding-left: 15px; position: relative; }
+    .smart-link { color: #004b8d; text-decoration: none; font-weight: 600; border-bottom: 1px solid #004b8d; word-break: break-word; }
+
+    /* 6. DOCUMENTS STYLES */
+    .doc-list { display: flex; flex-direction: column; gap: 10px; max-width: 600px; margin: 0 auto; }
+    .doc-card { background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid #eee; text-decoration: none; color: #333; transition: transform 0.2s, box-shadow 0.2s; }
+    .doc-card:hover { transform: translateX(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-color: #004b8d; }
+    .doc-icon { width: 40px; height: 40px; object-fit: contain; }
+    .doc-info { flex: 1; }
+    .doc-title { font-weight: 600; font-size: 15px; color: #004b8d; }
+
+    /* 7. OFFICES STYLES */
+    .office-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .office-img-container { width: 100%; height: 180px; position: relative; }
+    .office-img { width: 100%; height: 100%; object-fit: cover; }
+    .office-content { padding: 20px; }
+    .office-title { font-size: 18px; font-weight: 700; color: #004b8d; margin-bottom: 5px; }
+    .office-address { font-size: 14px; color: #555; margin-bottom: 15px; display: flex; align-items: center; gap: 5px; }
+    .feature-badges { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .badge-feat { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #f0f0f0; color: #444; display: flex; align-items: center; gap: 5px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-map { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #333; text-align: center; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .btn-provider-link { display: block; width: auto; background: #e3f2fd; color: #004b8d; text-align: center; padding: 10px; border-radius: 8px; margin-top: 15px; font-weight: bold; border: 1px solid #bbdefb; cursor: pointer; box-sizing: border-box; }
+    .btn-provider-link:hover { background: #bbdefb; }
+
+    /* 8. ESTILOS MÓDULO MEDICAMENTOS */
+    .med-result-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eee; max-width: 600px; margin: 20px auto; }
+    .med-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; }
+    .med-name { font-size: 22px; font-weight: 800; color: #333; }
+    .badge-exact { background: #e6fffa; color: #00796b; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid #b2dfdb; }
+    .badge-ai { background: #f3e5f5; color: #7b1fa2; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid #e1bee7; display: flex; align-items: center; gap: 5px; }
+    
+    .criteria-box { background: #fff8e1; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px; color: #5d4037; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+    .ai-disclaimer { font-size: 11px; color: #888; text-align: center; margin-top: 15px; font-style: italic; }
+    .loading-pulse { text-align: center; color: #004b8d; font-weight: bold; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    /* 9. ESTILOS SEARCH BAR */
+    .smart-search-container { display: flex; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    #smartSearchInput { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+    #smartSearchBtn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 0 20px; cursor: pointer; font-weight: bold; }
+    .smart-search-output { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #667eea; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-size: 15px; line-height: 1.6; }
+
+  </style>

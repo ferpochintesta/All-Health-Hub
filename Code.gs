@@ -763,19 +763,24 @@ function searchMedication(query) {
   }
 
   // --- FASE 2: BÚSQUEDA CON IA (GEMINI) ---
-  // Si llegamos aquí, no hubo coincidencia exacta. Llamamos a Gemini.
   try {
     let aiResult = identifyCategoryWithGemini(q, categories);
     
     if (aiResult && aiResult.categoryMatch) {
-      // Buscamos la fila que corresponde a la categoría que sugirió la IA
+      // Normalizamos lo que responde la IA (todo minúsculas y sin espacios extra)
+      let aiCategory = String(aiResult.categoryMatch).trim().toLowerCase();
+      
+      // Buscamos la fila que corresponde a la categoría sugerida
       for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === aiResult.categoryMatch) {
+        let dbCategory = String(data[i][0]).trim().toLowerCase();
+        
+        if (dbCategory === aiCategory) {
           return {
             found: true,
             method: 'AI_INFERENCE',
-            medication: query, // El nombre original que puso el usuario
-            detectedAs: aiResult.genericName, // Lo que la IA cree que es
+            medication: query, // Lo que el user escribió ("xanaxx")
+            // Usamos medicationName (lo que pedimos) con fallback a genericName
+            detectedAs: aiResult.medicationName || aiResult.genericName, 
             category: data[i][0],
             criteria: data[i][2]
           };
@@ -783,22 +788,17 @@ function searchMedication(query) {
       }
     }
   } catch (e) {
-    return { found: false, error: "AI Error: " + e.toString() };
+    console.log("Error en IA: " + e.toString());
   }
+  
+  // Si la IA dijo null, o la API falló, cae aquí devolviendo el input del usuario
+  return { found: false, medication: query };
 
-  return { 
-    found: false, 
-    medication: query // <--- AGREGAMOS ESTO para que devuelva el nombre buscado
-  };
 }
 
 function identifyCategoryWithGemini(userQuery, categoriesList) {
-  if (!DATABASES.GEMINI_API_KEY) {
-    throw new Error("The API Key is missing from the DATABASES configuration.");
-  }
-
   const apiKey = DATABASES.GEMINI_API_KEY;
-  
+  // Sugiero seguir usando el modelo que descubriste que sí tiene cuota en tu test anterior
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
 
   const prompt = `
@@ -809,19 +809,22 @@ function identifyCategoryWithGemini(userQuery, categoriesList) {
     ${JSON.stringify(categoriesList)}
     
     Task:
-    1. Identify the generic name/type of the medication in the User Query.
+    1. Identify the correct spelling and generic name of the medication in the User Query.
     2. STRICTLY match it to ONE of the Categories provided above.
-    3. If it does not belong to any category, return null.
+       * HINT: Benzodiazepines (e.g., Xanax/Alprazolam), ADHD meds, and other scheduled drugs MUST match "Narcotics/Controlled".
+       * HINT: Anxiety medications (non-controlled) can match "Depression".
+    3. If it does not belong to any category, return null for categoryMatch.
     
-    Output strictly in this JSON format (no markdown):
+    Output strictly in this JSON format:
     {
-      "genericName": "Official generic name or drug class",
-      "categoryMatch": "Exact String from my list"
+      "medicationName": "Corrected name of the drug",
+      "categoryMatch": "Exact String from my list or null"
     }
   `;
 
   const payload = {
-    contents: [{ parts: [{ text: prompt }] }]
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: "application/json" }
   };
 
   const options = {
@@ -833,25 +836,16 @@ function identifyCategoryWithGemini(userQuery, categoriesList) {
 
   try {
     const response = UrlFetchApp.fetch(url, options);
-    const responseCode = response.getResponseCode();
     const json = JSON.parse(response.getContentText());
 
-    if (responseCode !== 200) {
-       console.log("Error detallado API: ", json); 
-       throw new Error("Error de Gemini (" + responseCode + "): " + (json.error ? json.error.message : "Desconocido"));
-    }
-
     if (json.candidates && json.candidates.length > 0) {
-      let text = json.candidates[0].content.parts[0].text;
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(text);
+      return JSON.parse(json.candidates[0].content.parts[0].text); 
     }
   } catch (e) {
-    console.log("Error en identifyCategoryWithGemini: " + e.toString());
-    throw e;
+    console.log("Error en API: " + e.toString());
   }
   
-  return null;
+  return { medicationName: userQuery, categoryMatch: null };
 }
 
 /* =========================================

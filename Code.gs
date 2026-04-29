@@ -10,7 +10,7 @@ const DATABASES = {
   COMMON_DOCS_FOLDER_ID: '1wtWUQ9UBLI71enYg3Z2svlYAgzzklCDt',
   OFFICES_DB: { id: '1zt_liRrV-qFgr8q1_98zOhVmdkWS64P8w98MnU2dhro', sheetName: 'Sheet1' },
   MEDS_DB: {id: '1hIiiAAskm9S_4iz3ci2bUGl9EHiGKOAkZ9Gj8jZlIcA', sheetName: 'Sheet1'},
-  GEMINI_API_KEY: 'AIzaSyA8D-rILofyhJ3q-CNwNB8dZLDL4_17k_c',
+  GEMINI_API_KEY: PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'),
   KNOWLEDGE_DB: {id: '1U9SuR1b8cBr8NicAZP5U_3_JKLgh7TbW8nj5dd9MpUQ', sheetName: 'Sheet1'}
 };
 
@@ -139,7 +139,7 @@ function testGeminiConnection() {
     }
     
     const apiKey = DATABASES.GEMINI_API_KEY.trim();
-    const model = "gemini-3.5-flash"; // El modelo que vamos a probar
+    const model = "gemini-flash-latest"; // El modelo que vamos a probar
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     // Un prompt súper ligero para medir la velocidad pura del modelo
@@ -1260,7 +1260,7 @@ function processSmartQuery(chatHistory, currentQuery) {
         "parts": [{"text": currentContext}]
     });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
     
     // Inyectamos las system_instructions de forma nativa en la API v1beta
     const payload = {

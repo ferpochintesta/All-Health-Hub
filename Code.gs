@@ -2,16 +2,18 @@
    1. CONFIGURACIÓN Y BASES DE DATOS
    ========================================= */
 
+const props = PropertiesService.getScriptProperties();
+
 const DATABASES = {
-  INSURANCE_DB: '1CFrNUN27Pki4Kse0ECIg0VRLNFO9IOKoN8fBEyjgD-M',
-  PROVIDERS_ASSIGNMENT_DB: { id: '1NkkzWqlsczQnJqv0DLPhAwG6-3WRSB4i9U5b5HefXIU', sheetName: 'Sheet1' },
-  PROVIDERS_NPI_DB: { id: '1VRdQkigCrPX9CM6ZV4_ZogzaPhdjIplyGIzv-Q4aBsA', sheetName: 'UPDATED 01/12/2026' },
-  PROVIDERS_SCHEDULE_DB: { id: '1qOMPlC5oZfHq65I6JIIjT6XgZOj1WJ3axELhOmLaa4U', sheetName: 'By Provider' },
-  COMMON_DOCS_FOLDER_ID: '1wtWUQ9UBLI71enYg3Z2svlYAgzzklCDt',
-  OFFICES_DB: { id: '1zt_liRrV-qFgr8q1_98zOhVmdkWS64P8w98MnU2dhro', sheetName: 'Sheet1' },
-  MEDS_DB: {id: '1hIiiAAskm9S_4iz3ci2bUGl9EHiGKOAkZ9Gj8jZlIcA', sheetName: 'Sheet1'},
-  GEMINI_API_KEY: PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'),
-  KNOWLEDGE_DB: {id: '1U9SuR1b8cBr8NicAZP5U_3_JKLgh7TbW8nj5dd9MpUQ', sheetName: 'Sheet1'}
+  INSURANCE_DB: props.getProperty('INSURANCE_DB'),
+  PROVIDERS_ASSIGNMENT_DB: { id: props.getProperty('PROVIDERS_ASSIGNMENT_DB'), sheetName: 'Sheet1' },
+  PROVIDERS_NPI_DB: { id: props.getProperty('PROVIDERS_NPI_DB'), sheetName: 'UPDATED 01/12/2026' },
+  PROVIDERS_SCHEDULE_DB: { id: props.getProperty('PROVIDERS_SCHEDULE_DB'), sheetName: 'By Provider' },
+  COMMON_DOCS_FOLDER_ID: props.getProperty('COMMON_DOCS_FOLDER_ID'),
+  OFFICES_DB: { id: props.getProperty('OFFICES_DB'), sheetName: 'Sheet1' },
+  MEDS_DB: { id: props.getProperty('MEDS_DB'), sheetName: 'Sheet1' },
+  GEMINI_API_KEY: props.getProperty('GEMINI_API_KEY'),
+  KNOWLEDGE_DB: { id: props.getProperty('KNOWLEDGE_DB'), sheetName: 'Sheet1' }
 };
 
 const KNOWLEDGE_CONFIG = {
@@ -237,7 +239,7 @@ function getAppModules() {
 
 function doGet(e) {
   var template = HtmlService.createTemplateFromFile('Index');
-  var logoId = "1jZZrYpD-vlcDRassgz2rSc-4PaA-7sgK";
+  var logoId = PropertiesService.getScriptProperties().getProperty('LOGO_ID');
   template.companyLogoData = "https://drive.google.com/thumbnail?id=" + logoId + "&sz=w400";
 
   return template.evaluate()

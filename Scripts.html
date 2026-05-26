@@ -86,8 +86,9 @@
       div.className = 'result-item';
       div.onclick = () => loadPayer(opt.name);
       let noteHtml = opt.matchType === 'note' ? `<div class="note-match">⚠️ Found in notes: "${opt.noteSnippet}"</div>` : '';
-      div.innerHTML = `<div class="logo-box"><img src="${opt.logo}" class="logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'"></div>
+      let rawHtml = `<div class="logo-box"><img src="${opt.logo}" class="logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'"></div>
                        <div class="info-box"><div class="payer-name">${opt.name}</div>${noteHtml}</div>`;
+      div.innerHTML = DOMPurify.sanitize(rawHtml);
       list.appendChild(div);
     });
   }
@@ -106,8 +107,9 @@
       const card = document.createElement('div');
       card.className = 'grid-card';
       card.onclick = () => loadPayer(p.name);
-      card.innerHTML = `<img src="${p.logo}" class="grid-logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'">
+      let cardHtml = `<img src="${p.logo}" class="grid-logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'">
                         <div class="grid-label">${p.name}</div>`;
+      card.innerHTML = DOMPurify.sanitize(cardHtml);
       grid.appendChild(card);
     });
   }
@@ -164,7 +166,8 @@
         </div>`;
     });
     html += `</div></div>`;
-    content.innerHTML = html;
+    // Permite que los enlaces se abran en una nueva pestaña de forma segura
+    content.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
   }
 
   function switchLocalView(viewId) {
@@ -267,7 +270,7 @@
       let sexHtml = p.sex === 'F' ? `<span style="background:#fce4ec; color:#c2185b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♀ F</span>` : (p.sex === 'M' ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♂ M</span>` : '');
       let langHtml = p.languages ? `<div style="font-size:12px; color:#555; margin-top:2px;">🗣️ <strong>Languages:</strong> ${p.languages}</div>` : '';
 
-      card.innerHTML = `
+      let rawCardHtml = `
         <div style="padding:15px; display:flex; gap:15px;">
            <img src="${p.photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
            <div style="flex:1;">
@@ -290,6 +293,7 @@
               <div><strong>Fri:</strong> ${formatSchedule(p.schedule.Fri)}</div>
            </div>
         </div>`;
+      card.innerHTML = DOMPurify.sanitize(rawCardHtml);
       container.appendChild(card);
     });
   }
@@ -315,7 +319,8 @@
     filtered.forEach(d => {
       const card = document.createElement('a');
       card.className = 'doc-card'; card.href = d.url; card.target = '_blank';
-      card.innerHTML = `<img src="${d.icon}" class="doc-icon"><div class="doc-info"><div class="doc-title">${d.name}</div><div class="doc-link-text">Click to open</div></div><div style="color:#ccc;">➔</div>`;
+      let cardFilterHtml = `<img src="${d.icon}" class="doc-icon"><div class="doc-info"><div class="doc-title">${d.name}</div><div class="doc-link-text">Click to open</div></div><div style="color:#ccc;">➔</div>`;
+      card.cardFilterHtml = DOMPurify.sanitize(cardFilterHtml);
       container.appendChild(card);
     });
   }
@@ -415,7 +420,7 @@
       if (off.mapLink) mapBtns += `<a href="${off.mapLink}" target="_blank" class="btn-map">🗺️ Google Maps</a>`;
       if (off.streetView) mapBtns += `<a href="${off.streetView}" target="_blank" class="btn-map">👀 Street View</a>`;
 
-      div.innerHTML = `
+      let rawOfficeHtml = `
         <div class="office-img-container"><img src="${off.photo}" class="office-img"></div>
         <div class="office-content">
           <div class="office-title">${off.name}</div>
@@ -442,6 +447,7 @@
           <div class="btn-row">${mapBtns}</div>
           <div onclick="goToProvidersByOffice('${off.name}')" class="btn-provider-link">👨‍⚕️ View Providers in this Office</div>
         </div>`;
+      div.innerHTML = DOMPurify.sanitize(rawOfficeHtml, { ADD_ATTR: ['target'] });
       container.appendChild(div);
     });
     // SCROLL FIX CRUCIAL: Forzar subida tras renderizar
@@ -489,7 +495,7 @@
     container.innerHTML = '';
 
     if (!result.found) {
-      container.innerHTML = `
+      let rawMedHtml = `
         <div style="margin-top:25px; padding: 20px; border: 1px solid #fbbc04; border-radius: 8px; background: #fffde7; color: #333; font-family: sans-serif;">
            
            <div style="text-align: center; margin-bottom: 15px;">
@@ -512,6 +518,7 @@
            
            ${result.error ? `<div style="font-size:10px; color:#999; margin-top:10px; text-align:center;">Debug: ${result.error}</div>` : ''}
         </div>`;
+      container.innerHTML = DOMPurify.sanitize(rawMedHtml);
       return;
     }
 
@@ -631,7 +638,7 @@
       const align = isUser ? 'text-align: right;' : 'text-align: left;';
       const label = isUser ? '<strong>🧑‍💻 You</strong><br>' : '<strong>✨ AI Assistant</strong><br>';
 
-      output.innerHTML += `
+      let rawChatHtml = `
         <div style="width: 100%; margin-bottom: 15px; ${align}">
           <div style="display: inline-block; max-width: 85%; padding: 12px 16px; border-radius: 12px; text-align: left; ${bubbleStyle}">
             ${label}
@@ -639,6 +646,7 @@
           </div>
         </div>
       `;
+      output.innerHTML += DOMPurify.sanitize(rawChatHtml);
     });
 
     // Si la IA acaba de responder, le pegamos el Disclaimer al final del último mensaje
@@ -650,7 +658,7 @@
           <em>Suspect an error?</em> Take a <strong>screenshot</strong> clearly showing your prompt and this response, and report it immediately to the technical team.
         </div>
       `;
-      output.innerHTML += disclaimerHtml;
+      output.innerHTML += DOMPurify.sanitize(disclaimerHtml);
     }
 
     // Auto-scroll al fondo para ver el último mensaje

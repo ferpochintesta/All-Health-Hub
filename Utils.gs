@@ -3,11 +3,24 @@
 function toDirectLink(url) {
   if (!url) return "";
   const strUrl = url.toString().trim();
+  
+  // 1. Si es un link de Google Drive, creamos el thumbnail seguro
   const match = strUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match && match[1]) {
     return "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w1000";
   }
-  return strUrl;
+  
+  // 2. VALIDACIÓN DE SEGURIDAD (Lista Blanca de Protocolos)
+  // Solo permitimos URLs estándar. Bloqueamos javascript:, vbscript:, data:, etc.
+  const isSafeUrl = strUrl.startsWith("http://") || strUrl.startsWith("https://");
+  
+  if (isSafeUrl) {
+    return strUrl;
+  }
+  
+  // 3. Si es un enlace malicioso o no reconocido, devolvemos un marcador inofensivo
+  console.log("⚠️ Enlace bloqueado por seguridad: " + strUrl);
+  return "#"; 
 }
 
 function saveChunkedCache(key, stringValue) {

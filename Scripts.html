@@ -481,13 +481,18 @@
 
   // Nueva función para mostrar el error en pantalla
   function onSearchError(error) {
+    // Imprimimos el error en la consola del navegador (solo visible si abren las DevTools)
+    console.error("Medication Search Error:", error);
+    
     const container = document.getElementById('medResultContainer');
-    container.innerHTML = `
+    let rawErrorHtml = `
       <div style="text-align:center; margin-top:30px; color:#d93025; padding:20px; border:1px solid #d93025; border-radius:8px; background:#fff0f0;">
          <h3>⚠️ System Error</h3>
-         <p>Something went wrong on the server.</p>
-         <pre style="text-align:left; background:#eee; padding:10px; overflow:auto;">${error.message}</pre>
+         <p>Something went wrong communicating with the database.</p>
+         <p style="font-size:13px; color:#666;">Please refresh the page and try again. If the issue persists, contact IT.</p>
       </div>`;
+      
+    container.innerHTML = DOMPurify.sanitize(rawErrorHtml);
   }
 
   function renderMedResult(result) {
@@ -616,7 +621,10 @@
         })
         .withFailureHandler(function(error) {
           btn.disabled = false;
-          document.getElementById('ai-loading').innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+          console.error("Smart Query Network Error:", error); // Log interno
+          
+          let rawNetworkError = `<span style="color:red;">⚠️ Network or timeout error. Please try asking your question again.</span>`;
+          document.getElementById('ai-loading').innerHTML = DOMPurify.sanitize(rawNetworkError);
         })
         .processSmartQuery(aiChatHistory, query); // OJO AQUÍ: Enviamos 2 cosas ahora
   }

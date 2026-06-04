@@ -171,6 +171,27 @@ function identifyCategoryWithGemini(userQuery, categoriesList) {
    ========================================= */
 
 function processSmartQuery(chatHistory, currentQuery) {
+  // --- INICIO: PROTECCIÓN RATE LIMITING (DoS) ---
+  const userEmail = Session.getActiveUser().getEmail();
+  const cache = CacheService.getScriptCache();
+  const rateLimitKey = 'RATE_LIMIT_' + userEmail;
+  
+  let requestCount = cache.get(rateLimitKey);
+  if (requestCount && parseInt(requestCount) > 10) { 
+    // Si hace más de 10 peticiones en 1 minuto, bloqueamos
+    console.warn("⚠️ Rate limit exceeded by: " + userEmail);
+    return { 
+      response: `<div style="color:#d93025; padding: 12px; border: 1px solid #d93025; border-radius: 6px; background-color: #fff0f0; margin-bottom: 10px;">
+                   <b>⚠️ Too Many Requests</b><br>You are asking questions too fast. To ensure system stability, please wait 60 seconds before trying again.
+                 </div>`, 
+      hasContradiction: false 
+    };
+  }
+  
+  // Incrementamos el contador y establecemos la caducidad en 60 segundos
+  cache.put(rateLimitKey, requestCount ? (parseInt(requestCount) + 1).toString() : '1', 60);
+  // --- FIN: PROTECCIÓN RATE LIMITING ---
+
   try {
     if (!DATABASES.GEMINI_API_KEY) throw new Error("API Key is missing in DATABASES.");
     const apiKey = DATABASES.GEMINI_API_KEY.trim();
@@ -313,8 +334,12 @@ function processSmartQuery(chatHistory, currentQuery) {
     return result;
 
   } catch (error) {
+    // 1. Guardamos el error real en los logs internos de Apps Script para el desarrollador
+    console.error("AI Smart Search Error: " + error.message);
+    
+    // 2. Devolvemos un mensaje genérico y seguro al usuario
     return { 
-      response: `<div style="color:#d32f2f;"><b>Error processing query:</b> ${error.message}</div>`, 
+      response: `<div style="color:#d32f2f; padding: 10px; border: 1px solid #d32f2f; border-radius: 6px; background-color: #ffebee;"><b>⚠️ Service temporarily unavailable.</b><br>An internal error occurred while processing your request. Please try again in a few minutes.</div>`, 
       hasContradiction: false 
     };
   }

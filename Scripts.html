@@ -317,10 +317,45 @@
     const filtered = allDocsData.filter(d => d.name.toLowerCase().includes(text));
     if (filtered.length === 0) { container.innerHTML = '<p style="text-align:center; color:#888;">No documents found.</p>'; return; }
     filtered.forEach(d => {
+      // 1. Crear el contenedor principal (el enlace)
       const card = document.createElement('a');
-      card.className = 'doc-card'; card.href = d.url; card.target = '_blank';
-      let cardFilterHtml = `<img src="${d.icon}" class="doc-icon"><div class="doc-info"><div class="doc-title">${d.name}</div><div class="doc-link-text">Click to open</div></div><div style="color:#ccc;">➔</div>`;
-      card.cardFilterHtml = DOMPurify.sanitize(cardFilterHtml);
+      card.className = 'doc-card'; 
+      card.href = d.url; 
+      card.target = '_blank';
+
+      // 2. Crear y añadir la imagen (logo)
+      const img = document.createElement('img');
+      img.src = d.icon;
+      img.className = 'doc-icon';
+      card.appendChild(img);
+
+      // 3. Crear el contenedor de información
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'doc-info';
+
+      // 3.1 Crear y añadir el título
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'doc-title';
+      titleDiv.textContent = d.name; // textContent es 100% seguro contra XSS
+      infoDiv.appendChild(titleDiv);
+
+      // 3.2 Crear y añadir el texto secundario
+      const linkTextDiv = document.createElement('div');
+      linkTextDiv.style.fontSize = '12px';
+      linkTextDiv.style.color = '#666';
+      linkTextDiv.textContent = 'Click to open';
+      infoDiv.appendChild(linkTextDiv);
+
+      // Añadir el div de información a la tarjeta
+      card.appendChild(infoDiv);
+
+      // 4. Crear y añadir la flecha indicadora
+      const arrowDiv = document.createElement('div');
+      arrowDiv.style.color = '#ccc';
+      arrowDiv.textContent = '➔';
+      card.appendChild(arrowDiv);
+
+      // 5. Finalmente, inyectar la tarjeta completa en el contenedor
       container.appendChild(card);
     });
   }
@@ -654,7 +689,8 @@
           </div>
         </div>
       `;
-      output.innerHTML += DOMPurify.sanitize(rawChatHtml);
+      // Le decimos a DOMPurify que respete el target="_blank" para abrir nuevas pestañas
+      output.innerHTML += DOMPurify.sanitize(rawChatHtml, { ADD_ATTR: ['target'] });
     });
 
     // Si la IA acaba de responder, le pegamos el Disclaimer al final del último mensaje

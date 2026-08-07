@@ -26,6 +26,7 @@
           <div class="action-buttons">
             <button class="btn-action" onclick="loadAllPayers()">📂 Browse All</button>
             <button class="btn-action" onclick="loadAllCards()">💳 Insurance Cards</button>
+<!--        <button class="btn-action" onclick="initNetworkStatus()">📡 Network Status</button> -->
           </div>
         </div>
         <div id="resultsList"></div>
@@ -39,6 +40,45 @@
         <button class="back-btn" onclick="showSearch()">← Back to Search</button>
         <div id="detailContent"></div>
       </div>
+<!--  <div id="networkPayerSelectionView" style="display:none;">
+        <button class="back-btn" onclick="showSearch()">← Back to Search</button>
+        <h2 style="text-align:center; color:#004b8d; font-size:22px; margin-bottom:5px;">Check Network Status</h2>
+        <p style="text-align:center; color:#666; font-size:14px; margin-bottom:20px;">First, select the Insurance Payer you want to verify.</p>
+        
+        <div class="search-box" style="max-width:400px; margin:0 auto 20px auto;">
+          <input type="text" id="networkPayerSearch" placeholder="Search Insurance..." onkeyup="filterNetworkPayers()">
+        </div>
+        
+        <div id="networkPayerGrid" class="grid-container"></div>
+      </div>
+
+      <div id="networkFilterView" style="display:none;">
+        <button class="back-btn" onclick="initNetworkStatus()">← Back to Insurances</button>
+        
+        <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); border:1px solid #eee; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; border-bottom:1px solid #f0f0f0; padding-bottom:15px;">
+             <img id="selectedNetworkLogo" src="" style="width:60px; height:40px; object-fit:contain;">
+             <h2 id="selectedNetworkName" style="margin:0; color:#333; font-size:20px;"></h2>
+          </div>
+          
+          <p style="font-size:13px; color:#666; margin-bottom:15px; font-weight:600;">Select at least ONE filter to search:</p>
+          
+          <div style="display:flex; gap:15px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+               <label style="display:block; font-size:11px; font-weight:bold; color:#888; text-transform:uppercase; margin-bottom:5px;">👨‍⚕️ Provider</label>
+               <select id="networkProviderSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;"><option value="Any">Any Provider</option></select>
+            </div>
+            <div style="flex:1; min-width:200px;">
+               <label style="display:block; font-size:11px; font-weight:bold; color:#888; text-transform:uppercase; margin-bottom:5px;">📍 Office Location</label>
+               <select id="networkOfficeSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc;"><option value="Any">Any Location</option></select>
+            </div>
+          </div>
+          
+          <button class="btn-main" onclick="executeNetworkSearch()" style="width:100%; margin-top:20px; padding:12px;">SEARCH NETWORK STATUS</button>
+        </div>
+        
+        <div id="networkResultsContainer" style="display:flex; flex-direction:column; gap:15px;"></div>
+      </div>-->
     </div> 
     
     <div id="providersModule" style="display:none;" class="content-area">

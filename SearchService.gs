@@ -808,8 +808,34 @@ function searchMedication(query) {
 }
 
 /**
- * Busca estatus de red. Llamada desde google.script.run
+ * Helper para aislar Rutherford Médico de Rutherford Spa
  */
+function checkProviderInOffice(scheduleText, officeName) {
+  if (!scheduleText) return false;
+  let sched = scheduleText.toLowerCase();
+  let offName = officeName.toLowerCase();
+  let baseName = offName.split(' ')[0]; // Ej: "rutherford"
+  
+  let worksInBase = sched.includes(baseName);
+  
+  // Regla estricta para Rutherford vs Rutherford Spa
+  if (worksInBase && baseName === "rutherford") {
+     let isSpaOffice = offName.includes("spa");
+     let scheduleHasSpa = sched.includes("spa");
+     
+     // Si la oficina es Spa y el horario dice Spa -> TRUE
+     if (isSpaOffice && scheduleHasSpa) return true;
+     
+     // Si la oficina NO es Spa (Médico) y el horario NO dice Spa -> TRUE
+     if (!isSpaOffice && !scheduleHasSpa) return true;
+     
+     // Cualquier otra combinación es FALSE (Ej: Horario dice Rutherford Médico pero estamos evaluando la oficina Spa)
+     return false; 
+  }
+  
+  return worksInBase;
+}
+
 /**
  * Busca estatus de red. Llamada desde google.script.run
  */
@@ -834,11 +860,9 @@ function searchNetworkStatus(payerName, providerHubName, officeName) {
       let daysWorking = [];
       ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
         let schedule = prov.schedule[day] ? prov.schedule[day].toLowerCase() : "";
-        let officeBaseName = off.name.toLowerCase().split(' ')[0]; // Ej: "rutherford", "englewood"
         
-        let worksInOffice = schedule.includes(officeBaseName);
-        
-        // --- NUEVO: Regla TELEMED -> Englewood Cliffs ---
+        // Usamos el validador estricto de oficinas
+        let worksInOffice = checkProviderInOffice(schedule, off.name);
         let isTelemedForEnglewood = schedule.includes('telemed') && off.name.toLowerCase().includes('englewood cliffs');
 
         if (worksInOffice || isTelemedForEnglewood) {
@@ -886,10 +910,9 @@ function evaluateProviderNetwork(prov, office, daysWorking, payer, credIndex, al
         let headIsPresent = false;
         if (headProv && headProv.schedule[day]) {
            let headSched = headProv.schedule[day].toLowerCase();
-           let officeBaseName = office.name.toLowerCase().split(' ')[0];
            
-           // --- NUEVO: Validar presencia física o presencia virtual (TELEMED) del Head ---
-           if (headSched.includes(officeBaseName) || (headSched.includes('telemed') && office.name.toLowerCase().includes('englewood cliffs'))) {
+           // Usamos el validador estricto también para comprobar si el Head está en la oficina
+           if (checkProviderInOffice(headSched, office.name) || (headSched.includes('telemed') && office.name.toLowerCase().includes('englewood cliffs'))) {
               headIsPresent = true;
            }
         }
@@ -898,7 +921,6 @@ function evaluateProviderNetwork(prov, office, daysWorking, payer, credIndex, al
            let hName = headProv.credentialingName || headProv.name;
            let headRaw = credIndex.mdStatus[hName] ? credIndex.mdStatus[hName][payer] : null;
            dayStat = parseStatusString(headRaw);
-           // --- INGLES ---
            dayStat.note += ` (Billed under Head MD: ${headProv.name})`;
         } else {
            let apnRaw = credIndex.apnStatus[cName] ? credIndex.apnStatus[cName][payer] : null;
@@ -916,7 +938,6 @@ function evaluateProviderNetwork(prov, office, daysWorking, payer, credIndex, al
     let isIn = dayResults.some(r => r.stat.status === "In Network");
     let isOut = dayResults.some(r => r.stat.status === "Out of Network");
 
-    // --- INGLES TRADUCIDO ---
     if (isIn && !isOut) return { status: "In Network", color: "green", note: dayResults.map(r=> r.day + ": " + r.stat.note).join(" | ") };
     if (isOut && !isIn) return { status: "Out of Network", color: "red", note: dayResults.map(r=> r.day + ": " + r.stat.note).join(" | ") };
     if (isIn && isOut) return { status: "Mixed", color: "orange", note: "Status varies by day: " + dayResults.map(r=> r.day + ": " + r.stat.status).join(" | ") };

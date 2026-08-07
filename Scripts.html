@@ -171,10 +171,176 @@
   }
 
   function switchLocalView(viewId) {
-    ['searchView', 'galleryView', 'detailView'].forEach(id => { document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none'; });
+    ['searchView', 'galleryView', 'detailView', 'networkPayerSelectionView', 'networkFilterView'].forEach(id => { 
+       const el = document.getElementById(id);
+       if(el) el.style.display = (id === viewId) ? 'block' : 'none'; 
+    });
     if(viewId === 'searchView') { document.getElementById('resultsList').innerHTML = ''; document.getElementById('queryInput').value = ''; }
   }
   function showSearch() { switchLocalView('searchView'); }
+
+  // =========================================
+  //   LÓGICA: NETWORK STATUS (DENTRO DE SEGUROS)
+  // =========================================
+  
+  let networkLogosData = [];
+  let currentNetworkPayer = "";
+
+  function initNetworkStatus() {
+    switchLocalView('networkPayerSelectionView');
+    document.getElementById('networkPayerSearch').value = '';
+    document.getElementById('networkPayerGrid').innerHTML = '<p style="text-align:center; width:100%;">Loading insurances...</p>';
+    
+    google.script.run
+      .withSuccessHandler(function(response) {
+         if (response.success) {
+            networkLogosData = response.data.logos;
+            renderNetworkPayers(networkLogosData);
+            
+            if (!allProvidersData || allProvidersData.length === 0) {
+               google.script.run.withSuccessHandler(data => { allProvidersData = data; populateNetworkSelects(); }).getProvidersData();
+            } else { populateNetworkSelects(); }
+            
+            if (!allOfficesData || allOfficesData.length === 0) {
+               google.script.run.withSuccessHandler(data => { allOfficesData = data; populateNetworkSelects(); }).getOfficesData();
+            } else { populateNetworkSelects(); }
+         } else {
+            document.getElementById('networkPayerGrid').innerHTML = '<p style="color:red; text-align:center;">Error loading insurances.</p>';
+         }
+      })
+      .getCredentialingModuleData();
+  }
+
+  function renderNetworkPayers(payersList) {
+    const grid = document.getElementById('networkPayerGrid');
+    grid.innerHTML = '';
+    if (payersList.length === 0) { grid.innerHTML = '<p style="text-align:center; width:100%;">No insurances found.</p>'; return; }
+
+    payersList.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.onclick = () => selectNetworkPayer(p.name, p.logo);
+      card.innerHTML = `<img src="${p.logo}" class="grid-logo-img" onerror="this.src='https://via.placeholder.com/150x80?text=No+Logo'">
+                        <div class="grid-label">${p.name}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function filterNetworkPayers() {
+    const term = document.getElementById('networkPayerSearch').value.toLowerCase();
+    const filtered = networkLogosData.filter(p => p.name.toLowerCase().includes(term));
+    renderNetworkPayers(filtered);
+  }
+
+  function selectNetworkPayer(name, logoUrl) {
+    currentNetworkPayer = name;
+    switchLocalView('networkFilterView');
+    
+    document.getElementById('selectedNetworkName').innerText = name;
+    document.getElementById('selectedNetworkLogo').src = logoUrl;
+    document.getElementById('networkResultsContainer').innerHTML = ''; 
+  }
+
+  function populateNetworkSelects() {
+    if (allProvidersData && allProvidersData.length > 0) {
+       const pSelect = document.getElementById('networkProviderSelect');
+       pSelect.innerHTML = '<option value="Any">Any Provider</option>';
+       const sortedP = [...allProvidersData].sort((a, b) => a.name.localeCompare(b.name));
+       sortedP.forEach(p => {
+         const opt = document.createElement('option');
+         opt.value = p.name; opt.innerText = `${p.name} (${p.providerType || 'MD'})`;
+         pSelect.appendChild(opt);
+       });
+    }
+    if (allOfficesData && allOfficesData.length > 0) {
+       const oSelect = document.getElementById('networkOfficeSelect');
+       oSelect.innerHTML = '<option value="Any">Any Location</option>';
+       const sortedO = [...allOfficesData].sort((a, b) => a.name.localeCompare(b.name));
+       sortedO.forEach(o => {
+         const opt = document.createElement('option');
+         opt.value = o.name; opt.innerText = o.name;
+         oSelect.appendChild(opt);
+       });
+    }
+  }
+
+  function executeNetworkSearch() {
+    const pName = document.getElementById('networkProviderSelect').value;
+    const oName = document.getElementById('networkOfficeSelect').value;
+    const container = document.getElementById('networkResultsContainer');
+
+    if (pName === "Any" && oName === "Any") {
+       alert("Please select at least a Provider or an Office Location.");
+       return;
+    }
+
+    container.innerHTML = '<div class="loading-pulse" style="margin-top:20px;">⏳ Searching Network Status...</div>';
+
+    google.script.run
+      .withSuccessHandler(renderNetworkResults)
+      .withFailureHandler(err => { container.innerHTML = '<p style="color:red; text-align:center;">⚠️ Error connecting to server.</p>'; })
+      .searchNetworkStatus(currentNetworkPayer, pName, oName);
+  }
+
+  function renderNetworkResults(results) {
+    const container = document.getElementById('networkResultsContainer');
+    container.innerHTML = '';
+
+    if (results.length === 0) {
+      container.innerHTML = `
+        <div style="background:#fff8e1; border:1px solid #ffc107; padding:15px; border-radius:8px; text-align:center; color:#5d4037;">
+          <h4 style="margin:0 0 5px 0;">No Match Found</h4>
+          <p style="margin:0; font-size:13px;">The selected provider doesn't seem to work at the selected location.</p>
+        </div>`;
+      return;
+    }
+
+    results.sort((a, b) => {
+       if (a.office.name < b.office.name) return -1;
+       if (a.office.name > b.office.name) return 1;
+       return a.provider.name.localeCompare(b.provider.name);
+    });
+
+    results.forEach(res => {
+      let bgTop = "#f5f5f5"; let textTop = "#333";
+      if (res.statusColor === "green") { bgTop = "#e8f5e9"; textTop = "#2e7d32"; }
+      else if (res.statusColor === "red") { bgTop = "#ffebee"; textTop = "#c62828"; }
+      else if (res.statusColor === "orange") { bgTop = "#fff3e0"; textTop = "#e65100"; }
+      else if (res.statusColor === "gray") { bgTop = "#f5f5f5"; textTop = "#616161"; }
+
+      const card = document.createElement('div');
+      card.className = 'static-card';
+      
+      let badgeIcon = res.statusColor === "green" ? "✅" : (res.statusColor === "red" ? "❌" : "⚠️");
+      let typeBadge = res.provider.providerType === "APN" 
+            ? `<span style="background:#f3e5f5; color:#7b1fa2; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:5px;">APN</span>`
+            : `<span style="background:#e3f2fd; color:#1565c0; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:5px;">MD</span>`;
+
+      card.innerHTML = `
+        <div style="background:${bgTop}; padding:15px; border-bottom:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+           <div style="font-weight:800; color:${textTop}; font-size:16px;">
+             ${badgeIcon} ${res.networkStatus.toUpperCase()}
+           </div>
+           <div style="font-size:12px; font-weight:bold; color:#555;">📍 ${res.office.name}</div>
+        </div>
+        <div style="padding:15px; display:flex; gap:15px; align-items:center;">
+           <img src="${res.provider.photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid ${bgTop};">
+           <div style="flex:1;">
+             <div style="font-weight:bold; color:#004b8d; font-size:17px; margin-bottom:2px;">
+                ${res.provider.name} ${typeBadge}
+             </div>
+             <div style="font-size:12px; color:#666;">
+                <strong>Days in Office:</strong> ${res.daysWorking.join(', ')}
+             </div>
+           </div>
+        </div>
+        <div style="background:#fdfdfd; padding:12px 15px; font-size:13px; color:#444; border-top:1px solid #eee; line-height:1.5;">
+           <strong>📝 Details:</strong> <i>${res.statusNote}</i>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
 
   // --- MÓDULO: PROVIDERS ---
 

@@ -144,11 +144,14 @@ function buildCredentialingIndex() {
 }
 
 /**
- * Lee la nueva hoja de cálculo dedicada a los logos de los seguros
+ * Lee la hoja de cálculo dedicada a los logos de los seguros
  * Retorna [{ name: "Aetna", logo: "http..." }, ...]
  */
 function getNetworkPayers() {
   const CACHE_KEY = 'PAYER_LOGOS_CACHE';
+  
+  // 1. LISTA NEGRA: Agrega aquí todos los que quieras ocultar (en minúsculas)
+  const EXCLUDED_PAYERS = ['medicaid', 'amerigroup']; 
   
   let cachedData = readChunkedCache(CACHE_KEY);
   if (cachedData) {
@@ -159,20 +162,21 @@ function getNetworkPayers() {
   if (!ssId) throw new Error("PAYER_LOGOS_ID no configurado.");
 
   const ss = SpreadsheetApp.openById(ssId);
-  const sheet = ss.getSheets()[0]; // Lee la primera pestaña
+  const sheet = ss.getSheets()[0]; 
   const data = sheet.getDataRange().getValues();
 
   let payerLogos = [];
 
-  // Asumiendo que la fila 0 es encabezado (Payer, Logo URL)
   for (let i = 1; i < data.length; i++) {
     let payerName = String(data[i][0]).trim();
-    let logoUrl = String(data[i][1]).trim();
+    let rawLogoUrl = String(data[i][1]).trim();
     
-    if (payerName) {
+    // 2. Aplicamos el filtro de excepciones
+    if (payerName && !EXCLUDED_PAYERS.includes(payerName.toLowerCase())) {
       payerLogos.push({
         name: payerName,
-        logo: logoUrl
+        // 3. Convertimos el link al formato miniatura de Drive seguro
+        logo: toDirectLink(rawLogoUrl) 
       });
     }
   }

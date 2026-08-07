@@ -71,13 +71,14 @@ function logContradiction(query, details) {
 function buildCredentialingIndex() {
   const CACHE_KEY = 'CREDENTIALING_INDEX_CACHE';
   
-  // 1. Intentar leer de caché usando tu patrón existente
+  // --- NUEVO: LISTA DE SEGUROS A OMITIR (Escribir en minúsculas) ---
+  const EXCLUDED_PAYERS = ['Medicaid','Amerigroup']; 
+  
   let cachedData = readChunkedCache(CACHE_KEY);
   if (cachedData) {
     return JSON.parse(cachedData);
   }
 
-  // 2. Si no hay caché, construir el índice
   const ssId = PropertiesService.getScriptProperties().getProperty('CREDENTIALING_GRID_ID');
   if (!ssId) throw new Error("CREDENTIALING_GRID_ID no configurado.");
   
@@ -87,23 +88,17 @@ function buildCredentialingIndex() {
     { name: 'APN Summary', targetObj: 'apnStatus' }
   ];
 
-  let result = {
-    payers: [],
-    mdStatus: {},
-    apnStatus: {}
-  };
-
+  let result = { payers: [], mdStatus: {}, apnStatus: {} };
   let uniquePayersSet = new Set();
 
   sheetsToProcess.forEach(config => {
     const sheet = ss.getSheetByName(config.name);
-    if (!sheet) return; // Si la hoja no existe, saltar
+    if (!sheet) return;
 
     const data = sheet.getDataRange().getValues();
     let payersRowIndex = -1;
     let actionItemRowIndex = -1;
 
-    // Buscar "Payers" y "Action Item" en la columna A
     for (let i = 0; i < data.length; i++) {
       let cellValue = String(data[i][0]).trim().toLowerCase();
       if (cellValue === 'payers') {
@@ -114,41 +109,35 @@ function buildCredentialingIndex() {
       }
     }
 
-    // Si no encuentra Action Item, tomamos hasta el final de los datos
     if (actionItemRowIndex === -1) actionItemRowIndex = data.length;
 
     if (payersRowIndex !== -1) {
-      const headers = data[payersRowIndex]; // Nombres de los Providers
+      const headers = data[payersRowIndex];
 
-      // Iterar por los seguros (filas)
       for (let r = payersRowIndex + 1; r < actionItemRowIndex; r++) {
         let payerName = String(data[r][0]).trim();
-        if (!payerName) continue; // Omitir filas vacías
+        
+        // --- NUEVO: Filtrado de lista negra ---
+        if (!payerName || EXCLUDED_PAYERS.includes(payerName.toLowerCase())) continue; 
 
         uniquePayersSet.add(payerName);
 
-        // Iterar por los providers (columnas) empezando en la columna B (índice 1)
         for (let c = 1; c < headers.length; c++) {
           let providerName = String(headers[c]).trim();
           if (!providerName) continue;
 
           let status = String(data[r][c]).trim() || 'Undefined';
 
-          // Inicializar objeto para el provider si no existe
           if (!result[config.targetObj][providerName]) {
             result[config.targetObj][providerName] = {};
           }
-          
-          // Asignar el status al seguro
           result[config.targetObj][providerName][payerName] = status;
         }
       }
     }
   });
 
-  result.payers = Array.from(uniquePayersSet).sort(); // Lista única y ordenada
-
-  // 3. Guardar en caché
+  result.payers = Array.from(uniquePayersSet).sort();
   saveChunkedCache(CACHE_KEY, JSON.stringify(result));
 
   return result;

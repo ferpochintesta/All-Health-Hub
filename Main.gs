@@ -71,7 +71,16 @@ function updateSystemCache() {
     const provData = fetchProvidersFromSheets();
     saveChunkedCache('CACHE_PROVIDERS', JSON.stringify(provData));
     
-    console.log("✅ Caché General (Oficinas, Docs y Providers) actualizado con éxito.");
+    // 4. Credenciales (NUEVO)
+    // Borramos el primer bloque para forzar que readChunkedCache devuelva null y se reconstruya
+    PropertiesService.getScriptProperties().deleteProperty('CREDENTIALING_INDEX_CACHE_0');
+    buildCredentialingIndex(); 
+    
+    // 5. Logos de Seguros (NUEVO)
+    PropertiesService.getScriptProperties().deleteProperty('PAYER_LOGOS_CACHE_0');
+    getNetworkPayers();
+
+    console.log("✅ Caché General (Oficinas, Docs, Providers, Credenciales y Logos) actualizado con éxito.");
   } catch (error) {
     console.error("❌ Error actualizando caché: " + error.message);
   }
@@ -88,6 +97,31 @@ function updateScheduleDBProperty() {
     console.log("Nuevo valor guardado: " + nuevoValor);
   } catch (error) {
     console.error("❌ Error al intentar actualizar la propiedad: " + error.message);
+  }
+}
+
+/**
+ * Función que será llamada desde google.script.run en el frontend
+ * para inicializar el módulo de Seguros de Credenciales.
+ */
+function getCredentialingModuleData() {
+  try {
+    const indexData = buildCredentialingIndex();
+    const logosData = getNetworkPayers();
+    
+    return {
+      success: true,
+      data: {
+        index: indexData,
+        logos: logosData
+      }
+    };
+  } catch (error) {
+    console.error("Error en getCredentialingModuleData: " + error.message);
+    return {
+      success: false,
+      error: error.toString()
+    };
   }
 }
 

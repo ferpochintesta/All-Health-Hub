@@ -545,9 +545,13 @@ function fetchProvidersFromSheets() {
       if (foundSched[7]) providerObj.sex = String(foundSched[7]).trim().toUpperCase();
       if (foundSched[8]) providerObj.languages = String(foundSched[8]).trim();
       
-      // NPI y DEA (Índices 9 y 10, columnas J y K)
+      // NPI y DEA (Índices 9 y 10)
       if (foundSched[9]) providerObj.npi = cleanCredential(foundSched[9]);
       if (foundSched[10]) providerObj.dea = cleanCredential(foundSched[10]);
+
+      // --- NUEVO: Credentialing Name y Type (Índices 11 y 12, Columnas L y M) ---
+      providerObj.credentialingName = foundSched[11] ? String(foundSched[11]).trim() : name;
+      providerObj.providerType = foundSched[12] ? String(foundSched[12]).trim().toUpperCase() : "MD";
     }
 
     providersList.push(providerObj);
@@ -685,9 +689,17 @@ function fetchOfficesFromSheet() {
       streetView: data[i][6],
       wheelchair: data[i][7],
       parking: data[i][8],
-      manager: data[i][9],     // Columna J
-      services: data[i][10],   // Columna K (NUEVA)
-      notes: data[i][11]       // Columna L
+      manager: data[i][9],     
+      services: data[i][10],   
+      notes: data[i][11],
+      // --- NUEVO: Heads of Office (Índices 13 a 17, Columnas N a R) ---
+      heads: {
+        Mon: String(data[i][13] || "").trim(),
+        Tue: String(data[i][14] || "").trim(),
+        Wed: String(data[i][15] || "").trim(),
+        Thu: String(data[i][16] || "").trim(),
+        Fri: String(data[i][17] || "").trim()
+      }
     });
   }
 
@@ -793,4 +805,135 @@ function searchMedication(query) {
   // Si la IA dijo null, o la API falló, cae aquí devolviendo el input del usuario
   return { found: false, medication: query };
 
+}
+
+/**
+ * Busca estatus de red. Llamada desde google.script.run
+ */
+/**
+ * Busca estatus de red. Llamada desde google.script.run
+ */
+function searchNetworkStatus(payerName, providerHubName, officeName) {
+  const providers = getProvidersData();
+  const offices = getOfficesData();
+  const credIndex = buildCredentialingIndex(); 
+
+  let targetProviders = (providerHubName && providerHubName !== "Any") 
+      ? providers.filter(p => p.name.toLowerCase().includes(providerHubName.toLowerCase())) 
+      : providers;
+
+  let targetOffices = (officeName && officeName !== "Any") 
+      ? offices.filter(o => o.name.toLowerCase().includes(officeName.toLowerCase())) 
+      : offices;
+
+  let results = [];
+
+  targetProviders.forEach(prov => {
+    targetOffices.forEach(off => {
+      
+      let daysWorking = [];
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
+        let schedule = prov.schedule[day] ? prov.schedule[day].toLowerCase() : "";
+        let officeBaseName = off.name.toLowerCase().split(' ')[0]; // Ej: "rutherford", "englewood"
+        
+        let worksInOffice = schedule.includes(officeBaseName);
+        
+        // --- NUEVO: Regla TELEMED -> Englewood Cliffs ---
+        let isTelemedForEnglewood = schedule.includes('telemed') && off.name.toLowerCase().includes('englewood cliffs');
+
+        if (worksInOffice || isTelemedForEnglewood) {
+          daysWorking.push(day);
+        }
+      });
+
+      if (daysWorking.length > 0) {
+        let networkInfo = evaluateProviderNetwork(prov, off, daysWorking, payerName, credIndex, providers);
+
+        results.push({
+          provider: prov,
+          office: off,
+          networkStatus: networkInfo.status,   
+          statusColor: networkInfo.color,      
+          statusNote: networkInfo.note,
+          daysWorking: daysWorking
+        });
+      }
+    });
+  });
+
+  return results;
+}
+
+function evaluateProviderNetwork(prov, office, daysWorking, payer, credIndex, allProviders) {
+  let type = prov.providerType || "MD";
+  let cName = prov.credentialingName || prov.name;
+
+  if (type === "MD") {
+    let raw = credIndex.mdStatus[cName] ? credIndex.mdStatus[cName][payer] : null;
+    return parseStatusString(raw);
+  } 
+  
+  if (type === "APN") {
+    let dayResults = [];
+    
+    daysWorking.forEach(day => {
+      let headHubName = office.heads[day];
+      let dayStat = parseStatusString(null); 
+
+      if (headHubName) {
+        let headProv = allProviders.find(p => p.name.toLowerCase() === headHubName.toLowerCase());
+        
+        let headIsPresent = false;
+        if (headProv && headProv.schedule[day]) {
+           let headSched = headProv.schedule[day].toLowerCase();
+           let officeBaseName = office.name.toLowerCase().split(' ')[0];
+           
+           // --- NUEVO: Validar presencia física o presencia virtual (TELEMED) del Head ---
+           if (headSched.includes(officeBaseName) || (headSched.includes('telemed') && office.name.toLowerCase().includes('englewood cliffs'))) {
+              headIsPresent = true;
+           }
+        }
+
+        if (headProv && headIsPresent) {
+           let hName = headProv.credentialingName || headProv.name;
+           let headRaw = credIndex.mdStatus[hName] ? credIndex.mdStatus[hName][payer] : null;
+           dayStat = parseStatusString(headRaw);
+           // --- INGLES ---
+           dayStat.note += ` (Billed under Head MD: ${headProv.name})`;
+        } else {
+           let apnRaw = credIndex.apnStatus[cName] ? credIndex.apnStatus[cName][payer] : null;
+           dayStat = parseStatusString(apnRaw);
+           dayStat.note += ` (Head MD not present, using APN's credential)`;
+        }
+      } else {
+        let apnRaw = credIndex.apnStatus[cName] ? credIndex.apnStatus[cName][payer] : null;
+        dayStat = parseStatusString(apnRaw);
+        dayStat.note += ` (No Head MD assigned, using APN's credential)`;
+      }
+      dayResults.push({ day: day, stat: dayStat });
+    });
+
+    let isIn = dayResults.some(r => r.stat.status === "In Network");
+    let isOut = dayResults.some(r => r.stat.status === "Out of Network");
+
+    // --- INGLES TRADUCIDO ---
+    if (isIn && !isOut) return { status: "In Network", color: "green", note: dayResults.map(r=> r.day + ": " + r.stat.note).join(" | ") };
+    if (isOut && !isIn) return { status: "Out of Network", color: "red", note: dayResults.map(r=> r.day + ": " + r.stat.note).join(" | ") };
+    if (isIn && isOut) return { status: "Mixed", color: "orange", note: "Status varies by day: " + dayResults.map(r=> r.day + ": " + r.stat.status).join(" | ") };
+    
+    return { status: "Undefined", color: "gray", note: "Call Payer or Check Portal. " + dayResults.map(r=> r.day + ": " + r.stat.note).join(" | ") };
+  }
+}
+
+function parseStatusString(raw) {
+  if (!raw) return { status: "Undefined", color: "gray", note: "Not found in Grid." };
+  let s = raw.toLowerCase().trim();
+  if (s === "approved") {
+    return { status: "In Network", color: "green", note: "Approved" };
+  } else if (s === "stop") {
+    return { status: "Out of Network", color: "red", note: "Stop" };
+  } else {
+    // Si la celda tiene cualquier otro texto, lo devolvemos como nota.
+    return { status: "Undefined", color: "gray", note: "Status: " + raw };
+  }
 }

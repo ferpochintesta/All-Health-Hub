@@ -12,7 +12,9 @@ const DATABASES = {
   OFFICES_DB: { id: props.getProperty('OFFICES_DB'), sheetName: 'Sheet1' },
   MEDS_DB: { id: props.getProperty('MEDS_DB'), sheetName: 'Sheet1' },
   GEMINI_API_KEY: props.getProperty('GEMINI_API_KEY'),
-  KNOWLEDGE_DB: { id: props.getProperty('KNOWLEDGE_DB'), sheetName: 'Sheet1' }
+  KNOWLEDGE_DB: { id: props.getProperty('KNOWLEDGE_DB'), sheetName: 'Sheet1' },
+  CREDENTIALING_GRID_ID : props.getProperty('CREDENTIALING_GRID_ID'),
+  PAYER_LOGOS_ID : props.getProperty('PAYER_LOGOS_ID')
 };
 
 const KNOWLEDGE_CONFIG = {

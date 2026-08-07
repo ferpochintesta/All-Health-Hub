@@ -103,3 +103,14 @@ function deleteOldProperty() {
     console.error("❌ Error al intentar borrar la propiedad: " + error.message);
   }
 }
+
+function setupNewSpreadsheets() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  
+  scriptProperties.setProperties({
+    'CREDENTIALING_GRID_ID': '1d80TBd6isbvLwmG3J3KNmKt0_I4o2SmgYJsZGCE-IQU', // El ID del Grid con las 90 tabs
+    'PAYER_LOGOS_ID': '1BLSjqI312n1R4wZSN-jfqlYhYZXfYzR4Vnu5aJkyp4E'       // El ID de tu nueva hoja de logos
+  });
+  
+  Logger.log("Nuevas Hojas de Cálculo configuradas correctamente en Script Properties.");
+}

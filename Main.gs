@@ -76,3 +76,30 @@ function updateSystemCache() {
     console.error("❌ Error actualizando caché: " + error.message);
   }
 }
+
+function updateScheduleDBProperty() {
+  // 👇 === PEGA TU NUEVO VALOR ENTRE LAS COMILLAS === 👇
+  const nuevoValor = "PEGA_TU_NUEVO_VALOR_AQUI"; 
+  
+  try {
+    PropertiesService.getScriptProperties().setProperty('PROVIDERS_SCHEDULE_DB', nuevoValor);
+    
+    console.log("✅ Propiedad 'PROVIDERS_SCHEDULE_DB' actualizada con éxito.");
+    console.log("Nuevo valor guardado: " + nuevoValor);
+  } catch (error) {
+    console.error("❌ Error al intentar actualizar la propiedad: " + error.message);
+  }
+}
+
+function deleteOldProperty() {
+  try {
+    const scriptProps = PropertiesService.getScriptProperties();
+    
+    // Borramos la propiedad específica
+    scriptProps.deleteProperty('PROVIDERS_NPI_DB');
+    
+    console.log("✅ Propiedad 'PROVIDERS_NPI_DB' eliminada con éxito.");
+  } catch (error) {
+    console.error("❌ Error al intentar borrar la propiedad: " + error.message);
+  }
+}

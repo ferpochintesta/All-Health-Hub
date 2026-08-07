@@ -471,10 +471,6 @@ function fetchProvidersFromSheets() {
     .getSheetByName(DATABASES.PROVIDERS_ASSIGNMENT_DB.sheetName);
   const dataAssign = sheetAssign.getDataRange().getValues();
 
-  const sheetNPI = SpreadsheetApp.openById(DATABASES.PROVIDERS_NPI_DB.id)
-    .getSheetByName(DATABASES.PROVIDERS_NPI_DB.sheetName);
-  const dataNPI = sheetNPI.getDataRange().getValues();
-
   const sheetSched = SpreadsheetApp.openById(DATABASES.PROVIDERS_SCHEDULE_DB.id)
     .getSheetByName(DATABASES.PROVIDERS_SCHEDULE_DB.sheetName);
   const dataSched = sheetSched.getDataRange().getValues();
@@ -486,32 +482,6 @@ function fetchProvidersFromSheets() {
     let firstSpace = str.indexOf(' ');
     return firstSpace !== -1 ? str.substring(firstSpace + 1).trim() : str;
   };
-
-  // Helper para generar clave de búsqueda (2 palabras)
-  const getSearchKey = (fullName) => {
-    if (!fullName) return "";
-    let parts = String(fullName).trim().split(' ');
-    return (parts.length >= 2) ? (parts[0] + " " + parts[1]).toLowerCase() : parts[0].toLowerCase();
-  };
-
-  // --- OPTIMIZACIÓN: Crear Mapa de NPI/DEA ---
-  // En lugar de buscar en bucle, creamos un diccionario una sola vez.
-  const npiMap = {};
-  for (let r = 0; r < dataNPI.length; r++) {
-    for (let c = 0; c < dataNPI[r].length; c++) {
-      let cellVal = String(dataNPI[r][c]);
-      if (cellVal && cellVal.length > 3) { // Filtrar celdas vacías o muy cortas
-        let key = getSearchKey(cellVal);
-        // Si encontramos un nombre, guardamos sus datos en el mapa
-        if (!npiMap[key] && r + 2 < dataNPI.length) {
-          npiMap[key] = {
-            npi: cleanCredential(dataNPI[r + 1][c]),
-            dea: cleanCredential(dataNPI[r + 2][c])
-          };
-        }
-      }
-    }
-  }
 
   // --- PROCESAMIENTO PRINCIPAL ---
   let providersList = [];
@@ -530,7 +500,7 @@ function fetchProvidersFromSheets() {
     let name = dataAssign[i][0];
     if (!name) continue;
 
-    // 1. Servicios
+    // Servicios
     let services = [];
     serviceIndices.forEach(idx => {
       let cellValue = String(dataAssign[i][idx]).toLowerCase();
@@ -555,22 +525,29 @@ function fetchProvidersFromSheets() {
       languages: ""
     };
 
-    // 2. Asignar NPI/DEA desde el Mapa Optimizado
-    let searchKey = getSearchKey(name);
-    if (npiMap[searchKey]) {
-      providerObj.npi = npiMap[searchKey].npi;
-      providerObj.dea = npiMap[searchKey].dea;
-    }
-
-    // 3. Horarios y Extras
+    // Buscar el provider en la hoja de Horarios y extraer TODO de allí
     let foundSched = dataSched.find(row => String(row[0]).toLowerCase().includes(name.toLowerCase()));
+    
     if (foundSched) {
+      // Horarios (Índices 1 al 5)
       providerObj.schedule = {
-        Mon: foundSched[1], Tue: foundSched[2], Wed: foundSched[3], Thu: foundSched[4], Fri: foundSched[5]
+        Mon: foundSched[1] || "", 
+        Tue: foundSched[2] || "", 
+        Wed: foundSched[3] || "", 
+        Thu: foundSched[4] || "", 
+        Fri: foundSched[5] || ""
       };
-      if (foundSched[6]) providerObj.photo = toDirectLink(foundSched[6]) || providerObj.photo;
+      
+      // Foto, sexo, idiomas (Índices 6, 7 y 8)
+      if (foundSched[6] && typeof toDirectLink === 'function') {
+        providerObj.photo = toDirectLink(foundSched[6]) || providerObj.photo;
+      }
       if (foundSched[7]) providerObj.sex = String(foundSched[7]).trim().toUpperCase();
       if (foundSched[8]) providerObj.languages = String(foundSched[8]).trim();
+      
+      // NPI y DEA (Índices 9 y 10, columnas J y K)
+      if (foundSched[9]) providerObj.npi = cleanCredential(foundSched[9]);
+      if (foundSched[10]) providerObj.dea = cleanCredential(foundSched[10]);
     }
 
     providersList.push(providerObj);

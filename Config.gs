@@ -7,7 +7,6 @@ const props = PropertiesService.getScriptProperties();
 const DATABASES = {
   INSURANCE_DB: props.getProperty('INSURANCE_DB'),
   PROVIDERS_ASSIGNMENT_DB: { id: props.getProperty('PROVIDERS_ASSIGNMENT_DB'), sheetName: 'Sheet1' },
-  PROVIDERS_NPI_DB: { id: props.getProperty('PROVIDERS_NPI_DB'), sheetName: 'UPDATED 01/12/2026' },
   PROVIDERS_SCHEDULE_DB: { id: props.getProperty('PROVIDERS_SCHEDULE_DB'), sheetName: 'By Provider' },
   COMMON_DOCS_FOLDER_ID: props.getProperty('COMMON_DOCS_FOLDER_ID'),
   OFFICES_DB: { id: props.getProperty('OFFICES_DB'), sheetName: 'Sheet1' },

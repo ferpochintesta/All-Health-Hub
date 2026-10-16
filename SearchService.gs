@@ -522,7 +522,9 @@ function fetchProvidersFromSheets() {
       schedule: {},
       photo: "https://via.placeholder.com/150?text=No+Photo",
       sex: "",
-      languages: ""
+      languages: "",
+      minAge: "",
+      specialties: []
     };
 
     // Buscar el provider en la hoja de Horarios y extraer TODO de allí
@@ -552,6 +554,22 @@ function fetchProvidersFromSheets() {
       // --- NUEVO: Credentialing Name y Type (Índices 11 y 12, Columnas L y M) ---
       providerObj.credentialingName = foundSched[11] ? String(foundSched[11]).trim() : name;
       providerObj.providerType = foundSched[12] ? String(foundSched[12]).trim().toUpperCase() : "MD";
+
+      // --- NEW: Minimum patient age (Index 13, Column N "Age +") ---
+      // Do NOT use "if (foundSched[13])": the value 0 is valid ("+0") and would be treated as empty.
+      let rawAge = String(foundSched[13] === undefined || foundSched[13] === null ? "" : foundSched[13]).trim();
+      let ageDigits = rawAge.replace(/[^0-9]/g, "");   // accepts "16", "+16", "16+"
+      if (ageDigits !== "") providerObj.minAge = ageDigits;
+
+      // --- NEW: Specialty (Index 14, Column O "Specialty") ---
+      // Empty = not a specialist. Accepts several separated by commas: "Cardiology, Internal Medicine"
+      let rawSpec = (foundSched[14] === undefined || foundSched[14] === null) ? "" : String(foundSched[14]).trim();
+      if (rawSpec !== "") {
+        providerObj.specialties = rawSpec
+          .split(',')
+          .map(s => s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase()))   // "cardiology" -> "Cardiology"
+          .filter(s => s !== "");
+      }
     }
 
     providersList.push(providerObj);

@@ -353,7 +353,7 @@
 
   function renderProviders(data) {
     allProvidersData = data; 
-    populateLocations(data); populateServices(data); populateLanguages(data);
+      populateLocations(data); populateServices(data); populateLanguages(data); populateAges(data);
     
     if (pendingOfficeFilter) {
        const select = document.getElementById('locationFilter');
@@ -387,11 +387,56 @@
     Array.from(langSet).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.innerText = l; select.appendChild(opt); });
   }
 
+  function populateAges(data) {
+    const select = document.getElementById('ageFilter');
+    if (select.options.length > 1) return;   // already built, keep the current selection
+
+    select.innerHTML = '<option value="">All Ages</option>';
+    for (let a = 0; a <= 18; a++) {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.innerText = (a === 18) ? '18+' : String(a);
+      select.appendChild(opt);
+    }
+  }
+
   function populateServices(data) {
     const serviceSet = new Set();
-    data.forEach(p => { if (p.services) p.services.forEach(s => serviceSet.add(s)); });
-    const select = document.getElementById('serviceFilter'); select.innerHTML = '<option value="">All Services</option>';
-    Array.from(serviceSet).sort().forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.innerText = s; select.appendChild(opt); });
+    const specialtySet = new Set();
+    data.forEach(p => {
+      if (p.services) p.services.forEach(s => serviceSet.add(s));
+      if (p.specialties) p.specialties.forEach(s => specialtySet.add(s));
+    });
+
+    const select = document.getElementById('serviceFilter');
+    select.innerHTML = '<option value="">All Services</option>';
+
+    // Group 1: regular services
+    const servGroup = document.createElement('optgroup');
+    servGroup.label = 'Services';
+    Array.from(serviceSet).sort().forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = 'svc:' + s; opt.innerText = s;
+      servGroup.appendChild(opt);
+    });
+    select.appendChild(servGroup);
+
+    // Group 2: specialists (only if there is at least one)
+    if (specialtySet.size > 0) {
+      const specGroup = document.createElement('optgroup');
+      specGroup.label = 'Specialists';
+
+      const allOpt = document.createElement('option');
+      allOpt.value = 'spec:ALL'; allOpt.innerText = 'All Specialists';
+      specGroup.appendChild(allOpt);
+
+      Array.from(specialtySet).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = 'spec:' + s; opt.innerText = '   ' + s;
+        specGroup.appendChild(opt);
+      });
+      select.appendChild(specGroup);
+    }
   }
 
   function populateLocations(data) {
@@ -414,17 +459,27 @@
     const location = document.getElementById('locationFilter').value;
     const lang = document.getElementById('langFilter').value;
     const sex = document.getElementById('sexFilter').value;
+    const age = document.getElementById('ageFilter').value;
     
     const container = document.getElementById('providersList');
     container.innerHTML = '';
 
     const filtered = allProvidersData.filter(p => {
       const matchText = p.name.toLowerCase().includes(text);
-      const matchService = service === "" || p.services.includes(service);
+      let matchService = true;
+      const specs = p.specialties || [];
+      if (service.startsWith('svc:')) {
+        matchService = p.services.includes(service.substring(4));
+      } else if (service === 'spec:ALL') {
+        matchService = specs.length > 0;
+      } else if (service.startsWith('spec:')) {
+        matchService = specs.includes(service.substring(5));
+      }
       const matchLoc = location === "" || Object.values(p.schedule).some(val => String(val).includes(location));
       const matchSex = sex === "" || p.sex === sex;
       const matchLang = lang === "" || (p.languages && p.languages.includes(lang));
-      return matchText && matchService && matchLoc && matchSex && matchLang;
+      const matchAge = age === "" || (p.minAge !== "" && p.minAge !== undefined && Number(p.minAge) <= Number(age));
+      return matchText && matchService && matchLoc && matchSex && matchLang && matchAge;
     });
 
     if (filtered.length === 0) { container.innerHTML = '<p>No providers found.</p>'; return; }
@@ -433,7 +488,9 @@
       const card = document.createElement('div');
       card.className = 'static-card'; card.style.cursor = "default";
       let servicesHtml = p.services.map(s => `<span style="background:#e8f0fe; color:#004b8d; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px;">${s}</span>`).join('');
+      let specialtyHtml = (p.specialties || []).map(s => `<span style="background:#f3e5f5; color:#7b1fa2; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold; margin-right:4px;">${s}</span>`).join('');
       let sexHtml = p.sex === 'F' ? `<span style="background:#fce4ec; color:#c2185b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♀ F</span>` : (p.sex === 'M' ? `<span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display: inline-block; white-space: nowrap;">♂ M</span>` : '');
+      let ageHtml = (p.minAge !== "" && p.minAge !== undefined) ? `<span style="background:#e8f5e9; color:#2e7d32; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; margin-left:5px; display:inline-block; white-space:nowrap;">+${p.minAge}</span>` : '';
       let langHtml = p.languages ? `<div style="font-size:12px; color:#555; margin-top:2px;">🗣️ <strong>Languages:</strong> ${p.languages}</div>` : '';
 
       let rawCardHtml = `
@@ -441,10 +498,10 @@
            <img src="${p.photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
            <div style="flex:1;">
              <div style="display:block; font-weight:bold; color:#004b8d; font-size:16px; line-height:1.4;">
-                ${p.name} ${sexHtml}
+                ${p.name} ${sexHtml} ${ageHtml}
               </div>
              <div style="font-size:12px; color:#666; margin-top:2px;">MA: <strong>${p.ma}</strong></div>
-             ${langHtml}<div style="margin-top:5px;">${servicesHtml}</div>
+             ${langHtml}<div style="margin-top:5px;">${specialtyHtml}${servicesHtml}</div>
            </div>
         </div>
         <div style="background:#f9f9f9; padding:10px; font-size:12px; border-top:1px solid #eee;">
